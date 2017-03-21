@@ -2,15 +2,20 @@
 <html>
 <head>
 	<meta encoding="UTF-8"></meta>
+	<link rel="StyleSheet" type="text/CSS" href="css/style.css" />
+	<script type="text/JavaScript" src="js/tracking/build/tracking-min.js"></script>
 	<script type="text/JavaScript" src="js/jquery-3.1.1.min.js"></script>
 	<script type="text/JavaScript" src="js/effects.js"></script>
-	<link rel="StyleSheet" type="text/CSS" href="css/style.css" />
 </head>
 <body>
+	<video id="video_camara" preload autoplay loop muted></video>
+	
 	<div id="ventana_login">
 		<h1>Bienvenido al juego del Pong</h1>
 		<h2>Pulsa el bot&oacute;n Empezar</h2>
 		<button id="boton_empezar">Empezar</button>
 	</div>
+	
+	<canvas id="bloque_movil"></canvas>
 </body>
 </html>

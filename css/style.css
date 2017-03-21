@@ -1,6 +1,11 @@
-html {
+html  {
 	background-color: lightblue;
 	height: 100%;
+}
+
+body {
+	margin: 0px;
+	padding: 0px;
 }
 
 #ventana_login {
@@ -25,4 +30,22 @@ html {
 	font-size: 100%;
 	color: white;
 	font-weight: bold;
+}
+
+#video_camara {
+	position: absolute;
+	width: 50%;
+	height: 100%;
+	object-fit: fill;
+	visibility: hidden;
+}
+
+#bloque_movil {
+	position: absolute;
+	top: calc(50% - 100px / 2);
+	left: calc(50% - 100px / 2);
+	width: 100px;
+	height: 100px;
+	background-color: orange;
+	display: none;
 }

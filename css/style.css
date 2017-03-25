@@ -1,0 +1,51 @@
+html  {
+	background-color: lightblue;
+	height: 100%;
+}
+
+body {
+	margin: 0px;
+	padding: 0px;
+}
+
+#ventana_login {
+	position: absolute;
+	top: calc(50% - 200px / 2);
+	left: calc(50% - 500px / 2);
+	background-color: white;
+	text-align: center;
+	width: 500px;
+	height: 200px;
+	border: 4px solid black;
+	border-radius: 20px;
+	font-family: helvetica;
+	opacity: 0.6;
+}
+
+#boton_empezar {
+	background: linear-gradient(to bottom, lightblue, darkblue);
+	width: 200px;
+	height: 50px;
+	border: 2px solid black;
+	font-size: 100%;
+	color: white;
+	font-weight: bold;
+}
+
+#video_camara {
+	position: absolute;
+	width: 50%;
+	height: 100%;
+	object-fit: fill;
+	visibility: hidden;
+}
+
+#bloque_movil {
+	position: absolute;
+	top: calc(50% - 100px / 2);
+	left: calc(50% - 100px / 2);
+	width: 100px;
+	height: 100px;
+	background-color: orange;
+	display: none;
+}

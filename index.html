@@ -8,14 +8,24 @@
 	<script type="text/JavaScript" src="js/effects.js"></script>
 </head>
 <body>
-	<video id="video_camara" preload autoplay loop muted></video>
+	<video id="video_camara" class="elemento_absoluto" preload autoplay loop muted></video>
 	
-	<div id="ventana_login">
+	<div id="ventana_login" class="elemento_absoluto">
 		<h1>Bienvenido al juego del Pong</h1>
 		<h2>Pulsa el bot&oacute;n Empezar</h2>
-		<button id="boton_empezar">Empezar</button>
+		<form id="formulario_empezar">
+			<select id="lista_colores" autofocus required>
+				<option value="">Selecciona un color...</option>
+				<option value="rojo">Rojo</option>
+				<option value="verde">Verde</option>
+				<option value="azul">Azul</option>
+			</select>
+			<input type="submit" id="boton_empezar" value="Empezar" />
+		</form>
 	</div>
 	
-	<canvas id="bloque_movil"></canvas>
+	<canvas id="bola" class="elemento_absoluto"></canvas>
+	
+	<canvas id="bloque_jugador" class="elemento_absoluto"></canvas>
 </body>
 </html>

@@ -8,10 +8,17 @@ body {
 	padding: 0px;
 }
 
-#ventana_login {
+.elemento_absoluto {
 	position: absolute;
+}
+
+#ventana_login {
 	top: calc(50% - 200px / 2);
+	top: -webkit-calc(50% - 200px / 2);
+	top: -moz-calc(50% - 200px / 2);
 	left: calc(50% - 500px / 2);
+	left: -webkit-calc(50% - 500px / 2);
+	left: -moz-calc(50% - 500px / 2);
 	background-color: white;
 	text-align: center;
 	width: 500px;
@@ -20,6 +27,10 @@ body {
 	border-radius: 20px;
 	font-family: helvetica;
 	opacity: 0.6;
+}
+
+#lista_colores {
+	float: left;
 }
 
 #boton_empezar {
@@ -33,17 +44,28 @@ body {
 }
 
 #video_camara {
-	position: absolute;
 	width: 50%;
 	height: 100%;
 	object-fit: fill;
 	visibility: hidden;
 }
 
-#bloque_movil {
-	position: absolute;
+#bola {
 	top: calc(50% - 100px / 2);
+	top: -webkit-calc(50% - 100px / 2);
+	top: -moz-calc(50% - 100px / 2);
 	left: calc(50% - 100px / 2);
+	left: -webkit-calc(50% - 100px / 2);
+	left: -moz-calc(50% - 100px / 2);
+	width: 100px;
+	height: 100px;
+	display: none;
+}
+
+#bloque_jugador {
+	top: calc(50% - 100px / 2);
+	top: -webkit-calc(50% - 100px / 2);
+	top: -moz-calc(50% - 100px / 2);
 	width: 100px;
 	height: 100px;
 	background-color: orange;

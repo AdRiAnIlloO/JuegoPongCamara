@@ -10,7 +10,7 @@ $(document).ready(function() {
 		// al indicado, acumulada en todos los componentes (RGB)
 		// i = indice del grupo {R, G, B, A} a analizar ("pixel")
 		// color = array con las componentes RGB del color a analizar
-		function getPixelColorDistance(i, color) {	
+		function getPixelColorDistance(i, color) {
 			return (Math.abs(pixels[i] - color[0]) + Math.abs(pixels[i + 1] - color[1]) + Math.abs(pixels[i + 2] - color[2]))
 		}
 		
@@ -60,10 +60,15 @@ $(document).ready(function() {
 	}
 	
 	blueTracker = new HighestBlueTracker()
-	ballVel = [0, 0] // Se necesita recordar
+	ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
+	lastTrackMsTime = new Date // Para el calculo de fps
 	
 	blueTracker.on('track', function(event) {
-		// Primero, centrar el jugador en la coordenada detectada:
+		const maxVel = 800 // Velocidad maxima (en pixeles) / segundo
+		
+		// Primero, centrar el bloque del jugador en la coordenada detectada.
+		// (El jugador no se actualizara en la pantalla hasta despues de 
+		// usar mas adelante las diferencias de posicion para los rebotes).
 		newPlayerPos = [event.data[0] - ($('#bloque_jugador').width() / 2),
 						event.data[1] - ($('#bloque_jugador').height() / 2)],
 		newBallPos = [0, 0]
@@ -79,54 +84,8 @@ $(document).ready(function() {
 		if(newPlayerPos[1] < 0) {
 			newPlayerPos[1] = 0
 		} else if(newPlayerPos[1] + $('#bloque_jugador').height() > $('#video_camara').height()) {
-			newPlayerPos[0] = $('#video_camara').height() - $('#bloque_jugador').height()
-		}
-		// ... (Fin correccion)
-		
-		// Manejar colisiones ahora que se puede obtener la posicion
-		// actual del bloque controlado y compararla con la nueva:
-		ballCenter = [$('#bola').position().left + $('#bola').width() / 2,
-						$('#bola').position().top + $('#bola').height() / 2]
-		ballRadiusRoot = Math.pow($('#bola').width() / 2, 2)
-		
-		for(i = 0, isColliding = false; !isColliding && i < 2; i++) { // Una iteracion para cada par de lados opuestos
-			// j = 0 en relacion con el ancho superior, j = 1 con el inferior:
-			for(j = 0, yOffset = i * $('#bloque_jugador').height(); !isColliding && j < $('#bloque_jugador').width(); j++) {
-				if((isColliding = Math.pow($('#bloque_jugador').position().left + j - ballCenter[0], 2)
-				+ Math.pow($('#bloque_jugador').position().top + yOffset - ballCenter[1], 2) <= ballRadiusRoot)) {
-					// Invertir sentido vertical de la bola:
-					ballVel[1] = -ballVel[1]
-					
-					// Aumentar mas la velocidad del rebote de la bola
-					// solo si el bloque avanza en sentido vertical opuesto:
-					if(!i && (newPlayerPos[1] > $('#bloque_jugador').position().top) 
-					|| i && (newPlayerPos[1] < $('#bloque_jugador').position().top)) {
-						ballVel[0] += (newPlayerPos[0] - $('#bloque_jugador').position().left)
-						ballVel[1] += (newPlayerPos[1] - $('#bloque_jugador').position().top)
-					}
-				}
-			}
-			
-			// j = 0 en relacion con el alto izquierdo, j = 1 con el derecho:
-			for(j = 0, xOffset = i * $('#bloque_jugador').width(); !isColliding &&  j < $('#bloque_jugador').height(); j++) {
-				if((isColliding = Math.pow($('#bloque_jugador').position().left + xOffset - ballCenter[0], 2)
-				+ Math.pow($('#bloque_jugador').position().top + j - ballCenter[1], 2) <= ballRadiusRoot)) {
-					// Invertir sentido horizontal de la bola:
-					ballVel[0] = -ballVel[0]
-					
-					// Aumentar mas la velocidad del rebote de la bola
-					// solo si el bloque avanza en sentido horizontal opuesto:
-					if(!i && (newPlayerPos[0] < $('#bloque_jugador').position().left) 
-					|| i && (newPlayerPos[0] > $('#bloque_jugador').position().left)) {
-						ballVel[0] += (newPlayerPos[0] - $('#bloque_jugador').position().left)
-						ballVel[1] += (newPlayerPos[1] - $('#bloque_jugador').position().top)
-					}
-				}
-			}
-		}
-
-		// Actualizar posicion del bloque del jugador:
-		$('#bloque_jugador').css({left: newPlayerPos[0], top: newPlayerPos[1]})
+			newPlayerPos[1] = $('#video_camara').height() - $('#bloque_jugador').height()
+		} // (Fin correccion)
 		
 		newBallPos = [$('#bola').position().left + ballVel[0],
 						$('#bola').position().top + ballVel[1]]
@@ -136,22 +95,74 @@ $(document).ready(function() {
 		// modificando la correspondiente componente de la velocidad por el rebote:
 		if(newBallPos[0] < 0) {
 			newBallPos[0] = 0
-			ballVel[0] = -ballVel[0]
+			ballVel[0] = Math.abs(ballVel[0])
 		} else if(newBallPos[0] + $('#bola').width() > $(document).width()) {
 			newBallPos[0] = $(document).width() - $('#bola').width()
-			ballVel[0] = -ballVel[0]
+			ballVel[0] = -Math.abs(ballVel[0])
 		}
 		
 		if(newBallPos[1] < 0) {
 			newBallPos[1] = 0
-			ballVel[1] = -ballVel[1]
+			ballVel[1] = Math.abs(ballVel[1])
 		} else if(newBallPos[1] + $('#bola').height() > $(document).height()) {
 			newBallPos[1] = $(document).height() - $('#bola').height()
-			ballVel[1] = -ballVel[1]
+			ballVel[1] = -Math.abs(ballVel[1])
 		}
 		
-		// Actualizar bola:
+		// Actualizar bola:		
 		$('#bola').css({left: newBallPos[0], top: newBallPos[1]})
+			
+		// Variable para el colisionado entre el jugador y la bola:
+		ballCenter = [$('#bola').position().left + $('#bola').width() / 2,
+						$('#bola').position().top + $('#bola').height() / 2]
+		ballRadiusRoot = Math.pow($('#bola').width() / 2, 2)		
+		maxCollisionDistance = ($('#bloque_jugador').width() + $('#bola').width()) / 2
+		willCollide = (Math.abs(event.data[0] - ballCenter[0]) < maxCollisionDistance
+						&& Math.abs(event.data[1] - ballCenter[1]) < maxCollisionDistance)
+		
+		// Actualizar la velocidad de la bola segun colisiones y la direccion del jugador.
+		// (La colision se puede dar entre lados perpendiculares a la vez)
+		if(willCollide) {
+			// Colisiones horizontales:
+			if(ballCenter[0] < event.data[0]) { // Colision izquierda
+				ballVel[0] = -Math.abs(ballVel[0])
+			} else { // Colision derecha
+				ballVel[0] = Math.abs(ballVel[0])
+			}
+			
+			// Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
+			if((ballCenter[0] < event.data[0]) == (newPlayerPos[0] < $('#bloque_jugador').position().left)) {
+				ballVel[0] += (newPlayerPos[0] - $('#bloque_jugador').position().left)
+			}
+			
+			// Colisiones verticales:
+			if(ballCenter[1] < event.data[1]) { // Colision superior
+				ballVel[1] = -Math.abs(ballVel[1])
+			} else { // Colision inferior
+				ballVel[1] = Math.abs(ballVel[1])
+			}
+			
+			// Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
+			if((ballCenter[1] < event.data[1]) == (newPlayerPos[1] < $('#bloque_jugador').position().top)) {
+				ballVel[1] += (newPlayerPos[1] - $('#bloque_jugador').position().top)
+			}
+		}
+		
+		// Actualizar posicion del bloque del jugador:
+		$('#bloque_jugador').css({left: newPlayerPos[0], top: newPlayerPos[1]})
+
+		// Limitar la velocidad maxima para no crear el caos,
+		// calculandola primero en maximos pixeles por frame:
+		currentMsTime = new Date
+		elapsedMs = (new Date - lastTrackMsTime) // Intervalo entre frames en milisegundos
+		lastTrackMsTime = currentMsTime
+		maxFrameSpeed = (maxVel * elapsedMs / 1000), squareMaxFrameSpeed = Math.pow(maxFrameSpeed, 2)
+		squareBallVelLength = Math.pow(ballVel[0], 2) + Math.pow(ballVel[1], 2)
+		
+		if(squareBallVelLength > squareMaxFrameSpeed) {
+			slowDownScale = Math.sqrt(squareMaxFrameSpeed / squareBallVelLength)
+			ballVel = [ballVel[0] * slowDownScale, ballVel[1] * slowDownScale]
+		}
 	})
 	
 	$('#formulario_empezar').submit(function(event) {

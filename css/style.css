@@ -1,11 +1,17 @@
 html  {
-	background-color: lightblue;
+	background-image: url('../images/fondo.png');
+	background-repeat: no-repeat;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+	margin: 0px;
+	padding: 0px;
 	height: 100%;
 }
 
 body {
-	margin: 0px;
-	padding: 0px;
+	
 }
 
 .elemento_absoluto {
@@ -50,24 +56,21 @@ body {
 	visibility: hidden;
 }
 
-#bola {
-	top: calc(50% - 100px / 2);
-	top: -webkit-calc(50% - 100px / 2);
-	top: -moz-calc(50% - 100px / 2);
-	left: calc(50% - 100px / 2);
-	left: -webkit-calc(50% - 100px / 2);
-	left: -moz-calc(50% - 100px / 2);
+#bloque_jugador {
 	width: 100px;
 	height: 100px;
 	display: none;
 }
 
-#bloque_jugador {
-	top: calc(50% - 100px / 2);
-	top: -webkit-calc(50% - 100px / 2);
-	top: -moz-calc(50% - 100px / 2);
+#bola {
 	width: 100px;
 	height: 100px;
-	background-color: orange;
+	display: none;
+}
+
+#bloque_adversario {
+	width: 20px;
+	height: 200px;
+	background-color: white;
 	display: none;
 }

@@ -12,6 +12,14 @@ $(document).ready(function() {
 	tracking.inherits(HighestBlueTracker, tracking.Tracker)
 	blueTracker = new HighestBlueTracker()
 	
+	voiceCommands = {
+		'ping': function() {
+			// Invertir sentido de la bola:
+			ballVel[0] = -ballVel[0]
+			ballVel[1] = -ballVel[1]
+		}
+	}
+	
 	function resetAllObjects() {
 		ballVel = [0, 0]
 		$('#bloque_jugador').css({left: $(window).width() / 4 - $('#bloque_jugador').width() / 2,
@@ -256,6 +264,11 @@ $(document).ready(function() {
 				$('#bloque_adversario').show()
 				
 				tracking.track('#video_camara', blueTracker, {camera: true})
+				
+				if(annyang) {
+					annyang.addCommands(voiceCommands)
+					annyang.start()
+				}
 			})
 		})
 		

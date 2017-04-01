@@ -267,6 +267,7 @@ $(document).ready(function() {
 				
 				if(annyang) {
 					annyang.addCommands(voiceCommands)
+					annyang.setLanguage('es-ES')
 					annyang.start()
 				}
 			})

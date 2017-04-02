@@ -14,16 +14,24 @@
 	<div id="ventana_login" class="elemento_absoluto">
 		<h1>Bienvenido al juego del Pong</h1>
 		<h2>Pulsa el bot&oacute;n Empezar</h2>
+		<img id="icono_ayuda" src="images/ayuda.png"></img>
 		<form id="formulario_empezar">
+			<input type="submit" id="boton_empezar" value="Empezar" />
 			<select id="lista_colores" autofocus required>
 				<option value="">Selecciona un color...</option>
 				<option value="rojo">Rojo</option>
 				<option value="verde">Verde</option>
 				<option value="azul">Azul</option>
 			</select>
-			<input type="submit" id="boton_empezar" value="Empezar" />
+			<p id="texto_ayuda">El juego buscar&aacute; a trav&eacute;s de la c&aacute;mara objetos del color que selecciones
+			para mover el jugador. Es recomendable que muestres la menor proporci&oacute;n posible del objeto
+			con el que quieras controlar el jugador, y elijas un color distinguible del fondo.Por ejemplo, coje un
+			bol&iacute;grafo del color seleccionado y mu&eacute;stralo en forma de punta a la c&aacute;mara.</p>
 		</form>
 	</div>
+	
+	<div id="goles_jugador" class="marcador elemento_absoluto">0</div>
+	<div id="goles_adversario" class="marcador elemento_absoluto">0</div>
 	
 	<canvas id="bloque_jugador" class="elemento_absoluto"></canvas>
 	

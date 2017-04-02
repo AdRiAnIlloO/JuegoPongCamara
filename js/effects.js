@@ -1,5 +1,7 @@
 $(document).ready(function() {
-	const maxBallVel = 1200, // Velocidad maxima de la bola (en pixeles) / segundo
+	const PLAYER_SCORED = 1,
+	OPPONENT_SCORED = 2,
+	maxBallVel = 1200, // Velocidad maxima de la bola (en pixeles) / segundo
 	maxOpponentYVel = 300 // Velocidad maxima vertical del adversario / segundo
 	
 	ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
@@ -77,21 +79,21 @@ $(document).ready(function() {
 	
 	// El inicio de las dimensiones del contenedor se presupone a partir de los bordes
 	// izquierdo y superior del DOM (ya que se enviaran bien las dimensiones de la camara o del html).
-	// Devuelve true si hay que reiniciar los objetos (punto marcado), false en caso contrario:
+	// Devuelve > 0 si hay que reiniciar los objetos (punto marcado), 0 en caso contrario:
 	function ensureObjectWithinBounds(object, newObjectPos, container) {
 		if(newObjectPos[0] < 0) {
 			newObjectPos[0] = 0
 			
 			if(object.attr('id') == 'bola') {
 				ballVel[0] = Math.abs(ballVel[0])
-				return true
+				return OPPONENT_SCORED
 			}
 		} else if(newObjectPos[0] + object.width() > container.width()) {
 			newObjectPos[0] = container.width() - object.width()
 			
 			if(object.attr('id') == 'bola') {
 				ballVel[0] = -Math.abs(ballVel[0])
-				return true
+				return PLAYER_SCORED
 			}
 		}
 		
@@ -109,7 +111,7 @@ $(document).ready(function() {
 			}
 		}
 		
-		return false
+		return 0
 	}
 	
 	HighestBlueTracker.prototype.track = function(pixels, width, height) {
@@ -185,10 +187,39 @@ $(document).ready(function() {
 		}
 		
 		// Asegurar contencion de objetos dentro de los limites:
-		if(ensureObjectWithinBounds($('#bola'), newBallPos, $(window), ballVel)) {
-			resetAllObjects()
-			return;
+		switch(ensureObjectWithinBounds($('#bola'), newBallPos, $(window), ballVel)) {
+			case PLAYER_SCORED:
+			{
+				curPlayerScore = $('#goles_jugador#').text()
+				curPlayerScore++
+				
+				$('#goles_jugador').text(curPlayerScore)
+				
+				if(curPlayerScore > 6) {
+					$('#goles_jugador').text(0)
+					$('#goles_adversario').text(0)
+				}
+				
+				resetAllObjects()
+				return
+			}
+			case OPPONENT_SCORED:
+			{
+				curOpponentScore = $('#goles_adversario').text()
+				curOpponentScore++
+				
+				$('#goles_adversario').text(curOpponentScore)
+				
+				if(curOpponentScore > 6) {
+					$('#goles_jugador').text(0)
+					$('#goles_adversario').text(0)
+				}
+				
+				resetAllObjects()
+				return
+			}
 		}
+		
 		ensureObjectWithinBounds($('#bloque_jugador'), newPlayerPos, $('#video_camara'))
 		ensureObjectWithinBounds($('#bloque_adversario'), newOpponentPos, $(window))
 		
@@ -222,9 +253,16 @@ $(document).ready(function() {
 		}
 	})
 	
+	$('#icono_ayuda').mouseenter(function() {
+		$('#texto_ayuda').show()
+	}).mouseleave(function() {
+		$('#texto_ayuda').hide()
+	})
+	
 	$('#formulario_empezar').submit(function(event) {
 		$(this).animate({opacity: 0}, function() {
 			$('#ventana_login').animate({opacity: 0}, function() {
+				$('.marcador').show()
 				resetAllObjects()
 				
 				// Desactivar visualizacion de la forma debida, por si acaso:

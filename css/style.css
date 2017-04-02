@@ -20,24 +20,28 @@ body {
 }
 
 #ventana_login {
-	top: calc(50% - 200px / 2);
-	top: -webkit-calc(50% - 200px / 2);
-	top: -moz-calc(50% - 200px / 2);
-	left: calc(50% - 500px / 2);
-	left: -webkit-calc(50% - 500px / 2);
-	left: -moz-calc(50% - 500px / 2);
+	top: calc(50% - 100px);
+	top: -webkit-calc(50% - 100px);
+	top: -moz-calc(50% - 100px);
+	left: calc(50% - 250px);
+	left: -webkit-calc(50% - 250px);
+	left: -moz-calc(50% - 250px);
 	background-color: white;
 	text-align: center;
 	width: 500px;
-	height: 200px;
 	border: 4px solid black;
 	border-radius: 20px;
 	font-family: helvetica;
 	opacity: 0.6;
 }
 
+#icono_ayuda {
+	height: 50px;
+	width: 50px;
+}
+
 #lista_colores {
-	float: left;
+	height: 30px;
 }
 
 #boton_empezar {
@@ -50,11 +54,38 @@ body {
 	font-weight: bold;
 }
 
+#texto_ayuda {
+	display: none;
+	font-weight: bold;
+	font-family: verdana;
+}
+
 #video_camara {
 	width: 50%;
 	height: 100%;
 	object-fit: fill;
 	visibility: hidden;
+}
+
+.marcador {
+	font-size: 50px;
+	display: none;
+}
+
+#goles_jugador {
+	width: calc(50% - 10px);
+	width: -webkit-calc(50% - 10px);
+	width: -moz-calc(50% - 10px);
+	text-align: right;
+	color: green;
+}
+
+#goles_adversario {
+	left: calc(50% + 10px);
+	left: -webkit-calc(50% + 10px);
+	left: -moz-calc(50% + 10px);
+	text-align: right;
+	color: red;
 }
 
 #bloque_jugador {

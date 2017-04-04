@@ -1,8 +1,8 @@
 $(document).ready(function() {
 	const PLAYER_SCORED = 1,
 	OPPONENT_SCORED = 2,
-	maxBallVel = 1200, // Velocidad maxima de la bola (en pixeles) / segundo
-	maxOpponentYVel = 300 // Velocidad maxima vertical del adversario / segundo
+	maxSquareBallVel = Math.pow(1200, 2), // Velocidad maxima de la bola (pixeles ^ 2 / segundo)
+	maxOpponentYVel = 300 // Velocidad maxima vertical del adversario (pixeles / segundo)
 	
 	ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
 	lastTrackMsTime = -1 // Para el calculo de fps
@@ -190,7 +190,7 @@ $(document).ready(function() {
 		switch(ensureObjectWithinBounds($('#bola'), newBallPos, $(window), ballVel)) {
 			case PLAYER_SCORED:
 			{
-				curPlayerScore = $('#goles_jugador#').text()
+				curPlayerScore = $('#goles_jugador').text()
 				curPlayerScore++
 				
 				$('#goles_jugador').text(curPlayerScore)
@@ -243,8 +243,8 @@ $(document).ready(function() {
 		$('#bloque_adversario').css({top: newOpponentPos[1]})
 
 		// Limitar la velocidad maxima para no crear el caos,
-		// calculandola primero en maximos pixeles por frame:
-		maxBallFrameSpeed = (maxBallVel * elapsedPercentageOfASecond), squareMaxFrameSpeed = Math.pow(maxBallFrameSpeed, 2)
+		// calculandola primero (pixeles ^ 2 / frame):
+		squareMaxFrameSpeed = (maxSquareBallVel * elapsedPercentageOfASecond)
 		squareBallVelLength = Math.pow(ballVel[0], 2) + Math.pow(ballVel[1], 2)
 		
 		if(squareBallVelLength > squareMaxFrameSpeed) {

@@ -1,7 +1,7 @@
 $(document).ready(function() {
 	const PLAYER_SCORED = 1,
 	OPPONENT_SCORED = 2,
-	maxSquareBallVel = Math.pow(1200, 2), // Velocidad maxima de la bola (pixeles ^ 2 / segundo)
+	maxBallVel = 1200, // Velocidad maxima de la bola (pixeles / segundo)
 	maxOpponentYVel = 300 // Velocidad maxima vertical del adversario (pixeles / segundo)
 	
 	ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
@@ -14,11 +14,18 @@ $(document).ready(function() {
 	tracking.inherits(HighestBlueTracker, tracking.Tracker)
 	blueTracker = new HighestBlueTracker()
 	
+	function reverseBallDirection() {
+		ballVel[0] = -ballVel[0]
+		ballVel[1] = -ballVel[1]
+	}
+	
 	voiceCommands = {
-		'ping': function() {
-			// Invertir sentido de la bola:
-			ballVel[0] = -ballVel[0]
-			ballVel[1] = -ballVel[1]
+		'(haz un) ping': function() {
+			reverseBallDirection()
+		}, '(ve) a por él': function() {
+			reverseBallDirection()
+		}, 'rebélate': function() {
+			reverseBallDirection()
 		}
 	}
 	
@@ -243,8 +250,8 @@ $(document).ready(function() {
 		$('#bloque_adversario').css({top: newOpponentPos[1]})
 
 		// Limitar la velocidad maxima para no crear el caos,
-		// calculandola primero (pixeles ^ 2 / frame):
-		squareMaxFrameSpeed = (maxSquareBallVel * elapsedPercentageOfASecond)
+		// calculandola primero (pixeles / frame):
+		maxBallFrameSpeed = (maxBallVel * elapsedPercentageOfASecond), squareMaxFrameSpeed = Math.pow(maxBallFrameSpeed, 2)
 		squareBallVelLength = Math.pow(ballVel[0], 2) + Math.pow(ballVel[1], 2)
 		
 		if(squareBallVelLength > squareMaxFrameSpeed) {
@@ -304,6 +311,7 @@ $(document).ready(function() {
 				tracking.track('#video_camara', blueTracker, {camera: true})
 				
 				if(annyang) {
+					annyang.debug()
 					annyang.addCommands(voiceCommands)
 					annyang.setLanguage('es-ES')
 					annyang.start()

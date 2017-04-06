@@ -1,21 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta encoding="UTF-8"></meta>
+	<meta charset="UTF-8"></meta>
 	<link rel="StyleSheet" type="text/CSS" href="css/style.css" />
 	<script type="text/JavaScript" src="js/tracking/build/tracking-min.js"></script>
+	<script type="text/JavaScript" src="js/annyang.min.js"></script>
 	<script type="text/JavaScript" src="js/jquery-3.1.1.min.js"></script>
 	<script type="text/JavaScript" src="js/effects.js"></script>
 </head>
 <body>
-	<video id="video_camara" preload autoplay loop muted></video>
+	<video id="video_camara" class="elemento_absoluto" preload autoplay loop muted></video>
 	
-	<div id="ventana_login">
+	<div id="ventana_login" class="elemento_absoluto">
 		<h1>Bienvenido al juego del Pong</h1>
 		<h2>Pulsa el bot&oacute;n Empezar</h2>
-		<button id="boton_empezar">Empezar</button>
+		<img id="icono_ayuda" src="images/ayuda.png"></img>
+		<form id="formulario_empezar">
+			<input type="submit" id="boton_empezar" value="Empezar" />
+			<select id="lista_colores" autofocus required>
+				<option value="">Selecciona un color...</option>
+				<option value="rojo">Rojo</option>
+				<option value="verde">Verde</option>
+				<option value="azul">Azul</option>
+			</select>
+			<p id="texto_ayuda">El juego buscar&aacute; a trav&eacute;s de la c&aacute;mara objetos del color que selecciones
+			para mover el jugador. Es recomendable que muestres la menor proporci&oacute;n posible del objeto
+			con el que quieras controlar el jugador, y elijas un color distinguible del fondo. Por ejemplo, coje un
+			bol&iacute;grafo del color seleccionado y mu&eacute;stralo en forma de punta a la c&aacute;mara.</p>
+		</form>
 	</div>
 	
-	<canvas id="bloque_movil"></canvas>
+	<div id="goles_jugador" class="marcador elemento_absoluto">0</div>
+	<div id="goles_adversario" class="marcador elemento_absoluto">0</div>
+	
+	<canvas id="bloque_jugador" class="elemento_absoluto"></canvas>
+	
+	<canvas id="bola" class="elemento_absoluto"></canvas>
+	
+	<canvas id="bloque_adversario" class="elemento_absoluto"></canvas>
 </body>
 </html>

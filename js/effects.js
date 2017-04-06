@@ -15,7 +15,7 @@ $(document).ready(function() {
 	blueTracker = new HighestBlueTracker()
 	
 	function reverseBallDirection() {
-		ballVel[0] = -ballVel[0]
+		ballVel[0] = Math.abs(ballVel[0])
 		ballVel[1] = -ballVel[1]
 	}
 	

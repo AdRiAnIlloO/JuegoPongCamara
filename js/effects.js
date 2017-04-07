@@ -311,7 +311,7 @@ $(document).ready(function() {
 				tracking.track('#video_camara', blueTracker, {camera: true})
 				
 				if(annyang) {
-					annyang.debug()
+					// annyang.debug()
 					annyang.addCommands(voiceCommands)
 					annyang.setLanguage('es-ES')
 					annyang.start()

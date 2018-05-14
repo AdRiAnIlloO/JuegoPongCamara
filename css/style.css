@@ -106,3 +106,7 @@ body {
 	background-color: white;
 	display: none;
 }
+
+#imagen_bloque_jugador {
+    visibility: hidden;
+}

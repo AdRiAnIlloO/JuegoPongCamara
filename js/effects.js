@@ -266,9 +266,41 @@ $(function () {
         }
     }
 
-    $('body').on('externalMove', function (event, x, y) {
+    function drawImageOnPlayerBlock(imageUrl) {
+        context = $('#bloque_jugador')[0].getContext('2d');
+        var $imagen = $('#imagen_bloque_jugador');
+        $imagen.prop('src', imageUrl);
+
+        // Dibujar en el canvas redimensionando la imagen original a las dimensiones del bloque jugador
+        context.drawImage($imagen[0], 0, 0, $('#bloque_jugador').width(), $('#bloque_jugador').height());
+    }
+
+    function clearPlayerBlock() {
+        context = $('#bloque_jugador')[0].getContext('2d');
+        context.clearRect(0, 0, $('#bloque_jugador').width(), $('#bloque_jugador').height());
+    }
+
+    function resizePlayerBlock(sideLength) {
+        $('#bloque_jugador').width(sideLength);
+        $('#bloque_jugador').height(sideLength);
+        $('#bloque_jugador').prop('width', sideLength);
+        $('#bloque_jugador').prop('height', sideLength);
+    }
+
+    $('body').on('clear_player_block', clearPlayerBlock);
+
+    $('body').on('external_move_player_block', function (event, x, y) {
         tickSimulate(x, y);
     })
+
+    $('body').on('resize_player_block', function (event, sideLength) {
+        resizePlayerBlock(sideLength);
+    });
+
+    $('body').on('set_player_block_image', function (event, imageUrl) {
+        drawImageOnPlayerBlock(imageUrl);
+    });
+
 
     blueTracker.on('track', function (event) {
         // event.data is only set by trackingjs. It is not a default property.
@@ -347,16 +379,19 @@ $(function () {
         var name = dataArray[0];
 
         switch (name) {
-            case 'set_player_block_image':
-                {
-                    $('#bloque_jugador').html(dataArray[1]);
-                    break;
-                }
-            case 'external_move_player_block':
-                {
-                    tickSimulate(dataArray[1], dataArray[2]);
-                    break;
-                }
+            case 'clear_player_block': {
+                clearPlayerBlock();
+                break;
+            } case 'external_move_player_block': {
+                tickSimulate(dataArray[1], dataArray[2]);
+                break;
+            } case 'resize_player_block': {
+                resizePlayerBlock(dataArray[1]);
+                break;
+            } case 'set_player_block_image': {
+                drawImageOnPlayerBlock(dataArray[1]);
+                break;
+            }
         }
     }
 

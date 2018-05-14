@@ -1,3 +1,11 @@
+const X_DIM = 0;
+const Y_DIM = 1;
+
+// Desired player block position from game control interfaces (Camera color, QR scanning...)
+var g_DesiredPlayerCenter = Array(2);
+
+var g_FPS = 60;
+
 $(function () {
     const PLAYER_SCORED = 1,
 	OPPONENT_SCORED = 2,
@@ -5,7 +13,9 @@ $(function () {
 	maxOpponentYVel = 300 // Velocidad maxima vertical del adversario (pixeles / segundo)
 
     ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
-    lastTrackMsTime = -1 // Para el calculo de fps
+
+    g_DesiredPlayerCenter = [$('#bloque_jugador').left + $('#bloque_jugador').width() / 2,
+        $('#bloque_jugador').top + $('#bloque_jugador').height() / 2];
 
     HighestBlueTracker = function () {
         HighestBlueTracker.base(this, 'constructor')
@@ -72,8 +82,8 @@ $(function () {
             }
 
             // Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
-            if ((ballCenter[0] < rectangleCenter[0]) == (newRectanglePos[0] < rectangle.position().left)) {
-                ballVel[0] += (newRectanglePos[0] - rectangle.position().left)
+            if ((ballCenter[0] < rectangleCenter[0]) == (newRectanglePos[0] < rectangle.left)) {
+                ballVel[0] += (newRectanglePos[0] - rectangle.left)
             }
 
             // Colisiones verticales:
@@ -84,8 +94,8 @@ $(function () {
             }
 
             // Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
-            if ((ballCenter[1] < rectangleCenter[1]) == (newRectanglePos[1] < rectangle.position().top)) {
-                ballVel[1] += (newRectanglePos[1] - rectangle.position().top)
+            if ((ballCenter[1] < rectangleCenter[1]) == (newRectanglePos[1] < rectangle.top)) {
+                ballVel[1] += (newRectanglePos[1] - rectangle.top)
             }
         }
     }
@@ -172,31 +182,21 @@ $(function () {
     }
 
     function tickSimulate(x, y) {
-        if (lastTrackMsTime == -1) {
-            lastTrackMsTime = new Date
-        }
-
-        // Obtenciones temporales para calculos mas adelante:
-        currentMsTime = new Date
-        elapsedMs = (currentMsTime - lastTrackMsTime) // Intervalo entre frames en milisegundos (= T = 1 / fps)
-        lastTrackMsTime = currentMsTime
-        elapsedPercentageOfASecond = elapsedMs / 1000
-
         // Centrar el bloque del jugador en la coordenada detectada:
         newPlayerPos = [x - ($('#bloque_jugador').width() / 2),
 						y - ($('#bloque_jugador').height() / 2)]
-        newOpponentPos = [$('#bloque_adversario').position().left,
-							$('#bloque_adversario').position().top]
+        newOpponentPos = [$('#bloque_adversario').left,
+							$('#bloque_adversario').top]
         newOpponentYCenter = newOpponentPos[1] + $('#bloque_adversario').height() / 2
-        currentBallYCenter = $('#bola').position().top + $('#bola').height() / 2
-        newBallPos = [$('#bola').position().left + ballVel[0],
-						$('#bola').position().top + ballVel[1]]
+        currentBallYCenter = $('#bola').top + $('#bola').height() / 2
+        newBallPos = [$('#bola').left + ballVel[0],
+						$('#bola').top + ballVel[1]]
 
         // Bloque del adversario: caso bola por encima o por debajo:
         if (newOpponentYCenter > currentBallYCenter) {
-            newOpponentPos[1] -= maxOpponentYVel * elapsedPercentageOfASecond
+            newOpponentPos[1] -= maxOpponentYVel / g_FPS
         } else if (newOpponentYCenter < currentBallYCenter) {
-            newOpponentPos[1] += maxOpponentYVel * elapsedPercentageOfASecond
+            newOpponentPos[1] += maxOpponentYVel / g_FPS
         }
 
         // Asegurar contencion de objetos dentro de los limites:
@@ -240,8 +240,8 @@ $(function () {
         $('#bola').css({ left: newBallPos[0], top: newBallPos[1] })
 
         // Variables para el colisionado entre rectangulos y la bola:
-        ballCenter = [$('#bola').position().left + $('#bola').width() / 2,
-						$('#bola').position().top + $('#bola').height() / 2]
+        ballCenter = [$('#bola').left + $('#bola').width() / 2,
+						$('#bola').top + $('#bola').height() / 2]
         ballRadiusRoot = Math.pow($('#bola').width() / 2, 2)
         maxCollisionDistance = ($('#bloque_jugador').width() + $('#bola').width()) / 2
 
@@ -257,7 +257,7 @@ $(function () {
 
         // Limitar la velocidad maxima para no crear el caos,
         // calculandola primero (pixeles / frame):
-        maxBallFrameSpeed = (maxBallVel * elapsedPercentageOfASecond), squareMaxFrameSpeed = Math.pow(maxBallFrameSpeed, 2)
+        maxBallFrameSpeed = (maxBallVel / g_FPS), squareMaxFrameSpeed = Math.pow(maxBallFrameSpeed, 2)
         squareBallVelLength = Math.pow(ballVel[0], 2) + Math.pow(ballVel[1], 2)
 
         if (squareBallVelLength > squareMaxFrameSpeed) {
@@ -287,10 +287,17 @@ $(function () {
         $('#bloque_jugador').prop('height', sideLength);
     }
 
+    // Set up tick simulation to be last forever to don't stop simulating.
+    // This is called exactly each FPS cycle so this deals automatically with possible empty times on each frame.
+    setInterval(function () {
+        tickSimulate(g_DesiredPlayerCenter[X_DIM], g_DesiredPlayerCenter[Y_DIM]);
+    }, Math.pow(10, 3) / g_FPS);
+
     $('body').on('clear_player_block', clearPlayerBlock);
 
     $('body').on('external_move_player_block', function (event, x, y) {
-        tickSimulate(x, y);
+        g_DesiredPlayerCenter[X_DIM] = x;
+        g_DesiredPlayerCenter[Y_DIM] = y;
     })
 
     $('body').on('resize_player_block', function (event, sideLength) {
@@ -304,7 +311,8 @@ $(function () {
 
     blueTracker.on('track', function (event) {
         // event.data is only set by trackingjs. It is not a default property.
-        tickSimulate(event.data[0], event.data[1]);
+        g_DesiredPlayerCenter[X_DIM] = event.data[0];
+        g_DesiredPlayerCenter[Y_DIM] = event.data[1];
     })
 
     $('#icono_ayuda').mouseenter(function () {
@@ -383,7 +391,8 @@ $(function () {
                 clearPlayerBlock();
                 break;
             } case 'external_move_player_block': {
-                tickSimulate(dataArray[1], dataArray[2]);
+                g_DesiredPlayerCenter[X_DIM] = dataArray[1];
+                g_DesiredPlayerCenter[Y_DIM] = dataArray[2];
                 break;
             } case 'resize_player_block': {
                 resizePlayerBlock(dataArray[1]);

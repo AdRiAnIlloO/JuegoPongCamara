@@ -2,9 +2,12 @@ const X_DIM = 0;
 const Y_DIM = 1;
 
 // Desired player block position from game control interfaces (Camera color, QR scanning...)
-var g_DesiredPlayerCenter = Array(2);
+var g_DesiredPlayerCenter = [0, 0]
 
 var g_FPS = 60;
+
+// This determines whether to track image from Pong layer (default) or from an external layer
+var g_bIsTrackingImageExternally = false;
 
 $(function () {
     const PLAYER_SCORED = 1,
@@ -13,9 +16,6 @@ $(function () {
 	maxOpponentYVel = 300 // Velocidad maxima vertical del adversario (pixeles / segundo)
 
     ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
-
-    g_DesiredPlayerCenter = [$('#bloque_jugador').left + $('#bloque_jugador').width() / 2,
-        $('#bloque_jugador').top + $('#bloque_jugador').height() / 2];
 
     HighestBlueTracker = function () {
         HighestBlueTracker.base(this, 'constructor')
@@ -45,10 +45,15 @@ $(function () {
             left: $(window).width() / 4 - $('#bloque_jugador').width() / 2,
             top: ($(window).height() - $('#bloque_jugador').height()) / 2
         })
+
+        g_DesiredPlayerCenter[X_DIM] = $(window).width() / 4;
+        g_DesiredPlayerCenter[Y_DIM] = $(window).height() / 2;
+
         $('#bola').css({
             left: ($(window).width() - $('#bola').width()) / 2,
             top: ($(window).height() - $('#bola').height()) / 2
         })
+
         $('#bloque_adversario').css({
             left: $(window).width() - $('#bloque_adversario').width(),
             top: ($(window).height() - $('#bloque_adversario').height()) / 2
@@ -66,7 +71,9 @@ $(function () {
 
     // Actualiza la velocidad de la bola segun colisiones y la direccion del rectangulo.
     // La colision se puede dar entre lados perpendiculares a la vez (rebote diagonal)
-    function handleCollision(ballCenter, ballRadiusRoot, rectangle, newRectanglePos) {
+    function handleCollision(ballCenter, ballRadius, rectangle, newRectanglePos) {
+        var maxCollisionDistance = ballRadius + rectangle.width() / 2;
+
         rectangleCenter = [newRectanglePos[0] + rectangle.width() / 2,
 							newRectanglePos[1] + rectangle.height() / 2]
 
@@ -74,6 +81,7 @@ $(function () {
 						&& Math.abs(rectangleCenter[1] - ballCenter[1]) < maxCollisionDistance)
 
         if (willCollide) {
+            debugger;
             // Colisiones horizontales:
             if (ballCenter[0] < rectangleCenter[0]) { // Colision izquierda
                 ballVel[0] = -Math.abs(ballVel[0])
@@ -82,8 +90,8 @@ $(function () {
             }
 
             // Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
-            if ((ballCenter[0] < rectangleCenter[0]) == (newRectanglePos[0] < rectangle.left)) {
-                ballVel[0] += (newRectanglePos[0] - rectangle.left)
+            if ((ballCenter[0] < rectangleCenter[0]) == (newRectanglePos[0] < rectangle.position().left)) {
+                ballVel[0] += (newRectanglePos[0] - rectangle.position().left)
             }
 
             // Colisiones verticales:
@@ -94,8 +102,8 @@ $(function () {
             }
 
             // Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
-            if ((ballCenter[1] < rectangleCenter[1]) == (newRectanglePos[1] < rectangle.top)) {
-                ballVel[1] += (newRectanglePos[1] - rectangle.top)
+            if ((ballCenter[1] < rectangleCenter[1]) == (newRectanglePos[1] < rectangle.position().top)) {
+                ballVel[1] += (newRectanglePos[1] - rectangle.position().top)
             }
         }
     }
@@ -185,12 +193,12 @@ $(function () {
         // Centrar el bloque del jugador en la coordenada detectada:
         newPlayerPos = [x - ($('#bloque_jugador').width() / 2),
 						y - ($('#bloque_jugador').height() / 2)]
-        newOpponentPos = [$('#bloque_adversario').left,
-							$('#bloque_adversario').top]
+        newOpponentPos = [$('#bloque_adversario').position().left,
+							$('#bloque_adversario').position().top]
         newOpponentYCenter = newOpponentPos[1] + $('#bloque_adversario').height() / 2
-        currentBallYCenter = $('#bola').top + $('#bola').height() / 2
-        newBallPos = [$('#bola').left + ballVel[0],
-						$('#bola').top + ballVel[1]]
+        currentBallYCenter = $('#bola').position().top + $('#bola').height() / 2
+        newBallPos = [$('#bola').position().left + ballVel[0],
+						$('#bola').position().top + ballVel[1]]
 
         // Bloque del adversario: caso bola por encima o por debajo:
         if (newOpponentYCenter > currentBallYCenter) {
@@ -240,15 +248,15 @@ $(function () {
         $('#bola').css({ left: newBallPos[0], top: newBallPos[1] })
 
         // Variables para el colisionado entre rectangulos y la bola:
-        ballCenter = [$('#bola').left + $('#bola').width() / 2,
-						$('#bola').top + $('#bola').height() / 2]
-        ballRadiusRoot = Math.pow($('#bola').width() / 2, 2)
+        ballCenter = [$('#bola').position().left + $('#bola').width() / 2,
+						$('#bola').position().top + $('#bola').height() / 2]
+        ballRadius = $('#bola').width() / 2;
         maxCollisionDistance = ($('#bloque_jugador').width() + $('#bola').width()) / 2
 
         // Colisionar, enviando los objetos DOM, teniendo asi
         // la informacion necesaria de las posiciones anteriores:
-        handleCollision(ballCenter, ballRadiusRoot, $('#bloque_jugador'), newPlayerPos) // Bola - jugador
-        handleCollision(ballCenter, ballRadiusRoot, $('#bloque_adversario'), newOpponentPos) // Bola - adversario
+        handleCollision(ballCenter, ballRadius, $('#bloque_jugador'), newPlayerPos) // Bola - jugador
+        handleCollision(ballCenter, ballRadius, $('#bloque_adversario'), newOpponentPos) // Bola - adversario
 
         // Actualizar posicion de los rectangulos
         // (necesario despues del colisionado, ver arriba):
@@ -287,6 +295,10 @@ $(function () {
         $('#bloque_jugador').prop('height', sideLength);
     }
 
+    function setExternalCameraTracking() {
+        g_bIsTrackingImageExternally = true;
+    }
+
     // Set up tick simulation to be last forever to don't stop simulating.
     // This is called exactly each FPS cycle so this deals automatically with possible empty times on each frame.
     setInterval(function () {
@@ -304,10 +316,11 @@ $(function () {
         resizePlayerBlock(sideLength);
     });
 
+    $('body').on('set_external_camera_tracking', setExternalCameraTracking);
+
     $('body').on('set_player_block_image', function (event, imageUrl) {
         drawImageOnPlayerBlock(imageUrl);
     });
-
 
     blueTracker.on('track', function (event) {
         // event.data is only set by trackingjs. It is not a default property.
@@ -363,7 +376,9 @@ $(function () {
                 $('#bola').show()
                 $('#bloque_adversario').show()
 
-                tracking.track('#video_camara', blueTracker, { camera: true })
+                if (!g_bIsTrackingImageExternally) {
+                    tracking.track('#video_camara', blueTracker, { camera: true })
+                }
 
                 if (annyang) {
                     // annyang.debug()
@@ -396,6 +411,9 @@ $(function () {
                 break;
             } case 'resize_player_block': {
                 resizePlayerBlock(dataArray[1]);
+                break;
+            } case 'set_external_camera_tracking': {
+                setExternalCameraTracking();
                 break;
             } case 'set_player_block_image': {
                 drawImageOnPlayerBlock(dataArray[1]);

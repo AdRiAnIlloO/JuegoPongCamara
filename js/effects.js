@@ -81,7 +81,6 @@ $(function () {
 						&& Math.abs(rectangleCenter[1] - ballCenter[1]) < maxCollisionDistance)
 
         if (willCollide) {
-            debugger;
             // Colisiones horizontales:
             if (ballCenter[0] < rectangleCenter[0]) { // Colision izquierda
                 ballVel[0] = -Math.abs(ballVel[0])

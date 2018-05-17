@@ -2,15 +2,15 @@
 <html>
 <head>
     <meta charset="UTF-8"></meta>
+    <title>Mini-juego QR</title>
     <link rel="StyleSheet" type="text/CSS" href="css/style.css" />
+    <script type="text/JavaScript" src="js/jquery-3.1.1.min.js"></script>
     <script type="text/JavaScript" src="js/tracking/build/tracking-min.js"></script>
     <script type="text/JavaScript" src="js/annyang.min.js"></script>
-    <script type="text/JavaScript" src="js/jquery-3.1.1.min.js"></script>
     <script type="text/JavaScript" src="js/effects.js"></script>
 </head>
 <body>
     <video id="video_camara" class="elemento_absoluto" preload autoplay loop muted></video>
-
     <div id="ventana_login" class="elemento_absoluto">
         <h1>Bienvenido al juego del Pong</h1>
         <h2>Pulsa el bot&oacute;n Empezar</h2>
@@ -31,16 +31,11 @@
             </p>
         </form>
     </div>
-
     <div id="goles_jugador" class="marcador elemento_absoluto">0</div>
     <div id="goles_adversario" class="marcador elemento_absoluto">0</div>
-
     <canvas id="bloque_jugador" class="elemento_absoluto" width="100" height="100"></canvas>
-
     <canvas id="bola" class="elemento_absoluto"></canvas>
-
     <canvas id="bloque_adversario" class="elemento_absoluto"></canvas>
-
     <img id="imagen_bloque_jugador" />
 </body>
 </html>

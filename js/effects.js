@@ -1,6 +1,3 @@
-const X_DIM = 0;
-const Y_DIM = 1;
-
 // Desired player block position from game control interfaces (Camera color, QR scanning...)
 var g_DesiredPlayerCenter = [0, 0]
 
@@ -10,6 +7,9 @@ var g_FPS = 60;
 var g_bIsTrackingImageExternally = false;
 
 $(function () {
+    const X_DIM = 0;
+    const Y_DIM = 1;
+
     const PLAYER_SCORED = 1,
 	OPPONENT_SCORED = 2,
 	maxBallVel = 1200, // Velocidad maxima de la bola (pixeles / segundo)

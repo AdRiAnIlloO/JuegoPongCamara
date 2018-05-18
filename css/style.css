@@ -18,20 +18,14 @@ body {
     position: absolute;
 }
 
-#ventana_login {
-    top: calc(50% - 100px);
-    top: -webkit-calc(50% - 100px);
-    top: -moz-calc(50% - 100px);
-    left: calc(50% - 250px);
-    left: -webkit-calc(50% - 250px);
-    left: -moz-calc(50% - 250px);
-    background-color: white;
-    text-align: center;
-    width: 500px;
+#ventana_login .modal-content {
     border: 4px solid black;
     border-radius: 20px;
-    font-family: helvetica;
-    opacity: 0.6;
+    opacity: 0.8;
+}
+
+#icono_ayuda:hover {
+    cursor: pointer;
 }
 
 #icono_ayuda {
@@ -39,18 +33,9 @@ body {
     width: 50px;
 }
 
-#lista_colores {
-    height: 30px;
-}
-
 #boton_empezar {
-    background: linear-gradient(to bottom, lightblue, darkblue);
-    width: 200px;
     height: 50px;
-    border: 2px solid black;
-    font-size: 100%;
-    color: white;
-    font-weight: bold;
+    width: 150px;
 }
 
 #texto_ayuda {

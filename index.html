@@ -1,35 +1,51 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"></meta>
+    <meta charset="UTF-8" />
     <title>Mini-juego QR</title>
     <link rel="StyleSheet" type="text/CSS" href="css/style.css" />
-    <script type="text/JavaScript" src="js/jquery-3.1.1.min.js"></script>
-    <script type="text/JavaScript" src="js/tracking/build/tracking-min.js"></script>
-    <script type="text/JavaScript" src="js/annyang.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="thirdparty/bootstrap/css/bootstrap.min.css" />
+    <script type="text/javascript" src="thirdparty/jquery.min.js"></script>
+    <script type="text/javascript" src="thirdparty/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/JavaScript" src="thirdparty/tracking/build/tracking-min.js"></script>
+    <script type="text/JavaScript" src="thirdparty/annyang.min.js"></script>
     <script type="text/JavaScript" src="js/effects.js"></script>
 </head>
 <body>
-    <video id="video_camara" class="elemento_absoluto" preload autoplay loop muted></video>
-    <div id="ventana_login" class="elemento_absoluto">
-        <h1>Bienvenido al juego del Pong</h1>
-        <h2>Pulsa el bot&oacute;n Empezar</h2>
-        <img id="icono_ayuda" src="images/ayuda.png"></img>
-        <form id="formulario_empezar">
-            <input type="submit" id="boton_empezar" value="Empezar" />
-            <select id="lista_colores" autofocus required>
-                <option value="">Selecciona un color...</option>
-                <option value="rojo">Rojo</option>
-                <option value="verde">Verde</option>
-                <option value="azul">Azul</option>
-            </select>
-            <p id="texto_ayuda">
-                El juego buscar&aacute; a trav&eacute;s de la c&aacute;mara objetos del color que selecciones
-                para mover el jugador. Es recomendable que muestres la menor proporci&oacute;n posible del objeto
-                con el que quieras controlar el jugador, y elijas un color distinguible del fondo. Por ejemplo, coje un
-                bol&iacute;grafo del color seleccionado y mu&eacute;stralo en forma de punta a la c&aacute;mara.
-            </p>
-        </form>
+    <video id="video_camara" class="elemento_absoluto" autoplay loop muted></video>
+
+    <div id="ventana_login" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Bienvenido al juego del Pong</h4>
+                    <img id="icono_ayuda" src="images/ayuda.png" />
+                </div>
+                <div class="modal-body">
+                    <p id="texto_ayuda">Primero, debes seleccionar un modo de detecci&oacute;n</p>
+                    <div class="form-group">
+                        <select id="game-mode-selection" class="form-control" form="game-config-form" autofocus
+                                required>
+                            <option value="">Selecciona modo de detecci&oacute;n...</option>
+                            <option value="color">Detecci&oacute;n por color</option>
+                            <option value="qr">Detecci&oacute;n por c&oacute;digo QR autenticado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select id="detection-secondary-selection" class="form-control">
+                            <option value="">Selecciona tipo espec&iacute;fico al modo de detecci&oacute;n</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <h5>Pulsa el bot&oacute;n Empezar cuando est&eacute;s listo</h5>
+
+                    <input id="boton_empezar" class="btn btn-primary" type="submit" form="game-config-form"
+                           value="Empezar" />
+                    <form id="game-config-form"></form>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="goles_jugador" class="marcador elemento_absoluto">0</div>
     <div id="goles_adversario" class="marcador elemento_absoluto">0</div>

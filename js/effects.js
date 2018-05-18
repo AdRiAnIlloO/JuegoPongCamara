@@ -17,12 +17,12 @@ $(function () {
 
     ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
 
-    HighestBlueTracker = function () {
-        HighestBlueTracker.base(this, 'constructor')
+    HighestColorTracker = function () {
+        HighestColorTracker.base(this, 'constructor')
     }
 
-    tracking.inherits(HighestBlueTracker, tracking.Tracker)
-    blueTracker = new HighestBlueTracker()
+    tracking.inherits(HighestColorTracker, tracking.Tracker)
+    colorTracker = new HighestColorTracker()
 
     function reverseBallDirection() {
         ballVel[0] = Math.abs(ballVel[0])
@@ -144,10 +144,10 @@ $(function () {
         return 0
     }
 
-    HighestBlueTracker.prototype.track = function (pixels, width, height) {
+    HighestColorTracker.prototype.track = function (pixels, width, height) {
         color = [0, 0, 0]
 
-        switch ($('#lista_colores').val()) {
+        switch ($('#detection-secondary-selection').val()) {
             case 'rojo': {
                 color = [255, 0, 0]
                 break
@@ -296,6 +296,9 @@ $(function () {
 
     function setExternalCameraTracking() {
         g_bIsTrackingImageExternally = true;
+
+        // For now, remove color detection mode, as it's only called when QR mode is wanted
+        $('#game-mode-selection option[value="color"]').remove();
     }
 
     // Set up tick simulation to be last forever to don't stop simulating.
@@ -321,21 +324,56 @@ $(function () {
         drawImageOnPlayerBlock(imageUrl);
     });
 
-    blueTracker.on('track', function (event) {
+    colorTracker.on('track', function (event) {
         // event.data is only set by trackingjs. It is not a default property.
         g_DesiredPlayerCenter[X_DIM] = event.data[0];
         g_DesiredPlayerCenter[Y_DIM] = event.data[1];
     })
 
-    $('#icono_ayuda').mouseenter(function () {
-        $('#texto_ayuda').show()
-    }).mouseleave(function () {
-        $('#texto_ayuda').hide()
-    })
+    $('#icono_ayuda').click(function () {
+        $('#texto_ayuda').toggle();
+    });
 
-    $('#formulario_empezar').submit(function (event) {
+    var defaultHelpDisplay = $('#texto_ayuda').html();
+
+    $('#game-mode-selection').change(function () {
+        switch ($('#game-mode-selection :selected').val()) {
+            case 'color': {
+                $('#detection-secondary-selection').prop('required', true);
+
+                // If secondary options only has one element (the default placeholder):
+                if ($('#detection-secondary-selection option').length < 2) {
+                    // Then, add the color tracking choices
+                    $('#detection-secondary-selection').append('<option value="rojo">Rojo</option>');
+                    $('#detection-secondary-selection').append('<option value="verde">Verde</option>');
+                    $('#detection-secondary-selection').append('<option value="azul">Azul</option>');
+                }
+
+                $('#texto_ayuda').html("El juego buscar&aacute; a trav&eacute;s de la c&aacute;mara objetos del color "
+                    + "que selecciones para mover el jugador. Es recomendable que muestres la menor proporci&oacute;n "
+                    + "posible del objeto con el que quieras controlar el jugador, y elijas un color distinguible del "
+                    + "fondo. Por ejemplo, coje un bol&iacute;grafo del color seleccionado y mu&eacute;stralo en forma "
+                    + "de punta a la c&aacute;mara.");
+                break;
+            } case 'qr': {
+                $('#detection-secondary-selection').prop('required', false);
+                $('#detection-secondary-selection option[value!=""]').remove();
+                $('#texto_ayuda').html("El juego realizar&aacute; un seguimiento a trav&eacute;s de la c&aacute;mara "
+                    + "del c&oacute;digo QR asociado a tu cuenta actualmente identificada en la Web, actualizando "
+                    + "en tiempo real la posici&oacute;n del bloque jugador acorde a la posici&oacute;n de tu "
+                    + "c&oacute;digo QR con respecto al espacio capturado por la c&aacute;mara");
+                break;
+            } default: {
+                $('#detection-secondary-selection').prop('required', false);
+                $('#texto_ayuda').html(defaultHelpDisplay);
+            }
+        }
+    });
+
+    $('#game-config-form').submit(function (event) {
         $(this).animate({ opacity: 0 }, function () {
             $('#ventana_login').animate({ opacity: 0 }, function () {
+                $(this).modal('hide');
                 $('.marcador').show()
                 resetAllObjects()
 
@@ -343,7 +381,7 @@ $(function () {
                 $(this).css('display', 'none')
 
                 // Configurar bloque del jugador:
-                switch ($('#lista_colores').val()) {
+                switch ($('#detection-secondary-selection').val()) {
                     case 'rojo': {
                         $('#bloque_jugador').css('background-color', 'red')
                         break
@@ -375,8 +413,8 @@ $(function () {
                 $('#bola').show()
                 $('#bloque_adversario').show()
 
-                if (!g_bIsTrackingImageExternally) {
-                    tracking.track('#video_camara', blueTracker, { camera: true })
+                if (!g_bIsTrackingImageExternally && $('#game-mode-selection :selected').val() === 'color') {
+                    tracking.track('#video_camara', colorTracker, { camera: true })
                 }
 
                 if (annyang) {
@@ -420,6 +458,8 @@ $(function () {
             }
         }
     }
+
+    $('#ventana_login').modal();
 
     window.addEventListener('message', onIFrameMsg, false);
 

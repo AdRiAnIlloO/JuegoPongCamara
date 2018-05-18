@@ -463,6 +463,7 @@ $(function () {
 
     window.addEventListener('message', onIFrameMsg, false);
 
+    // This event also ensures further postMessages will be always receiveable at this point
     var encodedArray = JSON.stringify(['pong_video_dimensions', $('#video_camara').width(),
         $('#video_camara').height()]);
     window.parent.postMessage(encodedArray, '*');

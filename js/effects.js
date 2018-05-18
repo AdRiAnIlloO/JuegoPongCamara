@@ -391,6 +391,8 @@ $(function () {
                     } case 'azul': {
                         $('#bloque_jugador').css('background-color', 'blue')
                         break
+                    } default: {
+                        $('#bloque_jugador').css('background-color', 'lightgray')
                     }
                 }
 

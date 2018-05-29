@@ -287,11 +287,11 @@ $(function () {
         context.clearRect(0, 0, $('#bloque_jugador').width(), $('#bloque_jugador').height());
     }
 
-    function resizePlayerBlock(sideLength) {
-        $('#bloque_jugador').width(sideLength);
-        $('#bloque_jugador').height(sideLength);
-        $('#bloque_jugador').prop('width', sideLength);
-        $('#bloque_jugador').prop('height', sideLength);
+    function resizePlayerBlock(width, height) {
+        $('#bloque_jugador').width(width);
+        $('#bloque_jugador').height(height);
+        $('#bloque_jugador').prop('width', width);
+        $('#bloque_jugador').prop('height', height);
     }
 
     function setExternalCameraTracking() {
@@ -308,21 +308,7 @@ $(function () {
     }, Math.pow(10, 3) / g_FPS);
 
     $('body').on('clear_player_block', clearPlayerBlock);
-
-    $('body').on('external_move_player_block', function (event, x, y) {
-        g_DesiredPlayerCenter[X_DIM] = x;
-        g_DesiredPlayerCenter[Y_DIM] = y;
-    })
-
-    $('body').on('resize_player_block', function (event, sideLength) {
-        resizePlayerBlock(sideLength);
-    });
-
     $('body').on('set_external_camera_tracking', setExternalCameraTracking);
-
-    $('body').on('set_player_block_image', function (event, imageUrl) {
-        drawImageOnPlayerBlock(imageUrl);
-    });
 
     colorTracker.on('track', function (event) {
         // event.data is only set by trackingjs. It is not a default property.
@@ -436,6 +422,47 @@ $(function () {
     ////////////               Iframe fallbacks               ////////////
     //////////////////////////////////////////////////////////////////////
 
+    function transformPlayerBlockFromQR(imgUrl, topLeftPointOfCollisionBox,
+        centralPointOffsets, preRotatedQRSidesLength, rotation)
+    {
+        // Set auxiliar player block center for next frame
+        g_DesiredPlayerCenter[X_DIM] = topLeftPointOfCollisionBox[X_DIM]
+            + centralPointOffsets[X_DIM];
+        g_DesiredPlayerCenter[Y_DIM] = topLeftPointOfCollisionBox[Y_DIM]
+            + centralPointOffsets[Y_DIM];
+
+        let playerBlockSidesLength = [
+            centralPointOffsets[X_DIM] * 2, centralPointOffsets[Y_DIM] * 2
+        ];
+        resizePlayerBlock(playerBlockSidesLength[X_DIM],
+            playerBlockSidesLength[Y_DIM]);
+
+        context = $('#bloque_jugador')[0].getContext('2d');
+        let $image = $('#imagen_bloque_jugador');
+        $image.prop('src', imgUrl);
+
+        context.fillStyle = 'lightblue';
+        context.fillRect(0, 0, playerBlockSidesLength[X_DIM],
+            playerBlockSidesLength[Y_DIM]);
+
+        // Remember initial transformations (these are going to be altered)
+        context.save();
+
+        // Move pivot point to the center of both QR and AABB boxes
+        context.translate(centralPointOffsets[X_DIM],
+            centralPointOffsets[Y_DIM]);
+
+        // Prepare rotation. This must be called before the actual drawing.
+        context.rotate(-rotation);
+
+        context.drawImage($image[0], -centralPointOffsets[X_DIM],
+            -centralPointOffsets[Y_DIM], preRotatedQRSidesLength[X_DIM],
+            preRotatedQRSidesLength[Y_DIM]);
+
+        // Restore initial transformations
+        context.restore();
+    }
+
     function onIFrameMsg(event) {
         var dataArray = JSON.parse(event.data);
         var name = dataArray[0];
@@ -444,18 +471,12 @@ $(function () {
             case 'clear_player_block': {
                 clearPlayerBlock();
                 break;
-            } case 'external_move_player_block': {
-                g_DesiredPlayerCenter[X_DIM] = dataArray[1];
-                g_DesiredPlayerCenter[Y_DIM] = dataArray[2];
-                break;
-            } case 'resize_player_block': {
-                resizePlayerBlock(dataArray[1]);
-                break;
             } case 'set_external_camera_tracking': {
                 setExternalCameraTracking();
                 break;
-            } case 'set_player_block_image': {
-                drawImageOnPlayerBlock(dataArray[1]);
+            } case 'transform_player_block_from_qr': {
+                transformPlayerBlockFromQR(dataArray[1], dataArray[2],
+                    dataArray[3], dataArray[4], dataArray[5]);
                 break;
             }
         }

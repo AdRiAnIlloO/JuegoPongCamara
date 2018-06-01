@@ -413,7 +413,7 @@ $(function () {
     ////////////               Iframe fallbacks               ////////////
     //////////////////////////////////////////////////////////////////////
 
-    function transformPlayerBlockFromQR(imgUrl, centralPoint,
+    function transformPlayerBlockFromQR(isInMirrorMode, imgUrl, centralPoint,
         collisionBoxSidesLength, qrSidesLength, rotation)
     {
         // Set auxiliar player block center for next frame
@@ -436,6 +436,12 @@ $(function () {
         // Move pivot point to the center of both QR and AABB boxes
         context.translate(collisionBoxSidesLength[X_DIM] / 2,
             collisionBoxSidesLength[Y_DIM] / 2);
+
+        if (!isInMirrorMode) {
+            // Mirror mode inverts horizontal dimension.
+            // Adjust this to fit brain intuition.
+            context.scale(-1, 1);
+        }
 
         // Prepare rotation. This must be called before the actual drawing.
         context.rotate(rotation);
@@ -461,7 +467,7 @@ $(function () {
                 break;
             } case 'transform_player_block_from_qr': {
                 transformPlayerBlockFromQR(dataArray[1], dataArray[2],
-                    dataArray[3], dataArray[4], dataArray[5]);
+                    dataArray[3], dataArray[4], dataArray[5], dataArray[6]);
                 break;
             }
         }

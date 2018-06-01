@@ -413,44 +413,38 @@ $(function () {
     ////////////               Iframe fallbacks               ////////////
     //////////////////////////////////////////////////////////////////////
 
-    function transformPlayerBlockFromQR(imgUrl, topLeftPointOfCollisionBox,
-        centralPointOffsets, qrSidesLength, rotation)
+    function transformPlayerBlockFromQR(imgUrl, centralPoint,
+        collisionBoxSidesLength, qrSidesLength, rotation)
     {
         // Set auxiliar player block center for next frame
-        g_DesiredPlayerCenter[X_DIM] = topLeftPointOfCollisionBox[X_DIM]
-            + centralPointOffsets[X_DIM];
-        g_DesiredPlayerCenter[Y_DIM] = topLeftPointOfCollisionBox[Y_DIM]
-            + centralPointOffsets[Y_DIM];
+        g_DesiredPlayerCenter = centralPoint;
 
-        let playerBlockSidesLength = [
-            centralPointOffsets[X_DIM] * 2, centralPointOffsets[Y_DIM] * 2
-        ];
-        resizePlayerBlock(playerBlockSidesLength[X_DIM],
-            playerBlockSidesLength[Y_DIM]);
+        resizePlayerBlock(collisionBoxSidesLength[X_DIM],
+            collisionBoxSidesLength[Y_DIM]);
 
         context = $('#bloque_jugador')[0].getContext('2d');
         let $image = $('#imagen_bloque_jugador');
         $image.prop('src', imgUrl);
 
         context.fillStyle = 'lightblue';
-        context.fillRect(0, 0, playerBlockSidesLength[X_DIM],
-            playerBlockSidesLength[Y_DIM]);
+        context.fillRect(0, 0, collisionBoxSidesLength[X_DIM],
+            collisionBoxSidesLength[Y_DIM]);
 
         // Remember initial transformations (these are going to be altered)
         context.save();
 
         // Move pivot point to the center of both QR and AABB boxes
-        context.translate(centralPointOffsets[X_DIM],
-            centralPointOffsets[Y_DIM]);
+        context.translate(collisionBoxSidesLength[X_DIM] / 2,
+            collisionBoxSidesLength[Y_DIM] / 2);
 
         // Prepare rotation. This must be called before the actual drawing.
         context.rotate(rotation);
 
-        context.drawImage($image[0], -centralPointOffsets[X_DIM],
-            -centralPointOffsets[Y_DIM], qrSidesLength[X_DIM],
+        context.drawImage($image[0], -qrSidesLength[X_DIM] / 2,
+            -qrSidesLength[Y_DIM] / 2, qrSidesLength[X_DIM],
             qrSidesLength[Y_DIM]);
 
-        // Restore initial transformations
+        // Restore initial transformations to draw properly on next call
         context.restore();
     }
 

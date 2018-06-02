@@ -4,7 +4,11 @@ var g_DesiredPlayerCenter = [0, 0]
 var g_FPS = 60;
 
 // This determines whether to track image from Pong layer (default) or from an external layer
-var g_bIsTrackingImageExternally = false;
+var g_isTrackingImageExternally = false;
+
+var g_isInDebug = false;
+
+var g_isInQrDetectionMode = false;
 
 $(function () {
     const X_DIM = 0;
@@ -41,9 +45,14 @@ $(function () {
 
     function resetAllObjects() {
         ballVel = [0, 0]
+        let playerCoords = [
+            $(window).width() / 4 - $('#bloque_jugador').width() / 2,
+            ($(window).height() - $('#bloque_jugador').height()) / 2
+        ];
+
         $('#bloque_jugador').css({
-            left: $(window).width() / 4 - $('#bloque_jugador').width() / 2,
-            top: ($(window).height() - $('#bloque_jugador').height()) / 2
+            left: playerCoords[X_DIM],
+            top: playerCoords[Y_DIM]
         })
 
         g_DesiredPlayerCenter[X_DIM] = $(window).width() / 4;
@@ -58,6 +67,21 @@ $(function () {
             left: $(window).width() - $('#bloque_adversario').width(),
             top: ($(window).height() - $('#bloque_adversario').height()) / 2
         })
+
+        $('#qr_bottom_left_point_debug').css({
+            left: playerCoords[X_DIM],
+            top: playerCoords[Y_DIM] + $('#bloque_jugador').height()
+        });
+
+        $('#qr_top_left_point_debug').css({
+            left: playerCoords[X_DIM],
+            top: playerCoords[Y_DIM]
+        });
+
+        $('#qr_top_right_point_debug').css({
+            left: playerCoords[X_DIM] + $('#bloque_jugador').width(),
+            top: playerCoords[Y_DIM]
+        });
     }
 
     // Obtiene la distancia del color en un pixel respecto
@@ -206,6 +230,18 @@ $(function () {
             newOpponentPos[1] += maxOpponentYVel / g_FPS
         }
 
+        if (g_isInQrDetectionMode) {
+            if (g_isInDebug) {
+                $('#qr_bottom_left_point_debug').show();
+                $('#qr_top_left_point_debug').show();
+                $('#qr_top_right_point_debug').show();
+            } else {
+                $('#qr_bottom_left_point_debug').hide();
+                $('#qr_top_left_point_debug').hide();
+                $('#qr_top_right_point_debug').hide();
+            }
+        }
+
         // Asegurar contencion de objetos dentro de los limites:
         switch (ensureObjectWithinBounds($('#bola'), newBallPos, $(window), ballVel)) {
             case PLAYER_SCORED:
@@ -286,7 +322,7 @@ $(function () {
     }
 
     function setExternalCameraTracking() {
-        g_bIsTrackingImageExternally = true;
+        g_isTrackingImageExternally = true;
 
         // For now, remove color detection mode, as it's only called when QR mode is wanted
         $('#game-mode-selection option[value="color"]').remove();
@@ -357,6 +393,10 @@ $(function () {
                 // Desactivar visualizacion de la forma debida, por si acaso:
                 $(this).css('display', 'none')
 
+                if ($('#game-mode-selection').val() === 'qr') {
+                    g_isInQrDetectionMode = true;
+                }
+
                 // Configurar bloque del jugador:
                 switch ($('#detection-secondary-selection').val()) {
                     case 'rojo': {
@@ -392,7 +432,7 @@ $(function () {
                 $('#bola').show()
                 $('#bloque_adversario').show()
 
-                if (!g_bIsTrackingImageExternally && $('#game-mode-selection :selected').val() === 'color') {
+                if (!g_isTrackingImageExternally && $('#game-mode-selection :selected').val() === 'color') {
                     tracking.track('#video_camara', colorTracker, { camera: true })
                 }
 
@@ -414,7 +454,8 @@ $(function () {
     //////////////////////////////////////////////////////////////////////
 
     function transformPlayerBlockFromQR(isInMirrorMode, imgUrl, centralPoint,
-        collisionBoxSidesLength, qrSidesLength, rotation)
+        collisionBoxSidesLength, qrSidesLength, rotation, bottomLeftPoint,
+        topLeftPoint, topRightPoint)
     {
         // Set auxiliar player block center for next frame
         g_DesiredPlayerCenter = centralPoint;
@@ -452,6 +493,20 @@ $(function () {
 
         // Restore initial transformations to draw properly on next call
         context.restore();
+
+        // Move the debug points in any case, to have them propery placed when
+        // debug mode may be enabled later
+        $('#qr_bottom_left_point_debug').css(
+            {left: bottomLeftPoint.x, top: bottomLeftPoint.y}
+        );
+
+        $('#qr_top_left_point_debug').css(
+            {left: topLeftPoint.x, top: topLeftPoint.y}
+        );
+
+        $('#qr_top_right_point_debug').css(
+            {left: topRightPoint.x, top: topRightPoint.y}
+        );
     }
 
     function onIFrameMsg(event) {
@@ -467,7 +522,8 @@ $(function () {
                 break;
             } case 'transform_player_block_from_qr': {
                 transformPlayerBlockFromQR(dataArray[1], dataArray[2],
-                    dataArray[3], dataArray[4], dataArray[5], dataArray[6]);
+                    dataArray[3], dataArray[4], dataArray[5], dataArray[6],
+                    dataArray[7], dataArray[8], dataArray[9]);
                 break;
             }
         }

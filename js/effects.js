@@ -10,6 +10,10 @@ var g_isInDebug = false;
 
 var g_isInQrDetectionMode = false;
 
+// Ratio between the length of a QR side and that of the line between the
+// centers of the find pattern pair present on that side
+const QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO = (29 / 23);
+
 $(function () {
     const X_DIM = 0;
     const Y_DIM = 1;
@@ -453,23 +457,108 @@ $(function () {
     ////////////               Iframe fallbacks               ////////////
     //////////////////////////////////////////////////////////////////////
 
-    function transformPlayerBlockFromQR(isInMirrorMode, imgUrl, centralPoint,
-        collisionBoxSidesLength, qrSidesLength, rotation, bottomLeftPoint,
-        topLeftPoint, topRightPoint)
+    function transformPlayerBlockFromQR(isInMirrorMode, imgUrl, origAspectRatio,
+        qrCaptureDims, bottomLeftPoint, topLeftPoint, topRightPoint)
     {
-        // Set auxiliar player block center for next frame
+        // This block first calculates non-canvas transformations
+
+        // Step 0: Prepare - Scale the find pattern points to the playable space
+        let scaleRatios = [
+            $('#video_camara').width() / qrCaptureDims[X_DIM],
+            $('#video_camara').height() / qrCaptureDims[Y_DIM]
+        ];
+
+        let scaledBottomLeftPoint = [
+            bottomLeftPoint.x * scaleRatios[X_DIM],
+            bottomLeftPoint.y * scaleRatios[Y_DIM]
+        ];
+
+        let scaledTopLeftPoint = [
+            topLeftPoint.x * scaleRatios[X_DIM],
+            topLeftPoint.y * scaleRatios[Y_DIM]
+        ];
+
+        let scaledTopRightPoint = [
+            topRightPoint.x * scaleRatios[X_DIM],
+            topRightPoint.y * scaleRatios[Y_DIM]
+        ];
+
+        // Step 1: Calculate the center of both QR code and AABB collision box
+        let centralPoint = [
+            (scaledBottomLeftPoint[X_DIM] + scaledTopRightPoint[X_DIM]) / 2,
+            (scaledBottomLeftPoint[X_DIM] + scaledTopRightPoint[Y_DIM]) / 2
+        ];
+
+        // Step 2: Calculate the sides length of the AABB collision box
+        let vecPrerotatedQrHorizontalSide = [
+            (scaledTopLeftPoint[X_DIM] - scaledTopRightPoint[X_DIM])
+            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO,
+            (scaledTopRightPoint[Y_DIM] - scaledTopLeftPoint[Y_DIM])
+            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO
+        ];
+
+        let vecPrerotatedQrVerticalSide = [
+            (scaledBottomLeftPoint[X_DIM] - scaledTopLeftPoint[X_DIM])
+            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO,
+            (scaledBottomLeftPoint[Y_DIM] - scaledTopLeftPoint[Y_DIM])
+            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO
+        ];
+
+        let collisionBoxSidesLength = [
+            Math.abs(vecPrerotatedQrHorizontalSide[X_DIM])
+            + Math.abs(vecPrerotatedQrVerticalSide[X_DIM]),
+            Math.abs(vecPrerotatedQrHorizontalSide[Y_DIM])
+            + Math.abs(vecPrerotatedQrVerticalSide[Y_DIM])
+        ];
+
+        // Step 3: Calculate the rotation of the QR code, scaling first the find
+        // pattern points to the original scale in order to rebuild the square.
+        // The horizontalRatio variable will be used later to scale and fit
+        // the squared QR into the collision box. This is a precise approach.
+        let horizontalRatio = origAspectRatio * $('#video_camara').height()
+            / $('#video_camara').width();
+
+        let squareScaledTopLeftPoint = [
+            scaledTopLeftPoint[X_DIM] * horizontalRatio,
+            scaledTopLeftPoint[Y_DIM]
+        ];
+
+        let squareScaledTopRightPoint = [
+            scaledTopRightPoint[X_DIM] * horizontalRatio,
+            scaledTopRightPoint[Y_DIM]
+        ];
+
+        let vecSquareShapedQrSide = [
+            (squareScaledTopLeftPoint[X_DIM] - squareScaledTopRightPoint[X_DIM])
+            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO,
+            (squareScaledTopRightPoint[Y_DIM] - squareScaledTopLeftPoint[Y_DIM])
+            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO
+        ];
+
+        if (isInMirrorMode) {
+            vecSquareShapedQrSide[X_DIM] *= -1;
+        }
+
+        let qrRotation = Math.atan2(
+            vecSquareShapedQrSide[Y_DIM], vecSquareShapedQrSide[X_DIM]
+        );
+
+        // Step 4: Calculate the side length of the square-shaped QR
+        let squareShapedQrSideLength = vecSquareShapedQrSide[X_DIM]
+            / Math.cos(qrRotation);
+
+        // Non-canvas transformations are ready at this moment, and we can draw.
+        // Set auxiliar player block center for next frame.
         g_DesiredPlayerCenter = centralPoint;
 
         resizePlayerBlock(collisionBoxSidesLength[X_DIM],
             collisionBoxSidesLength[Y_DIM]);
 
-        context = $('#bloque_jugador')[0].getContext('2d');
+        let context = $('#bloque_jugador')[0].getContext('2d');
         let $image = $('#imagen_bloque_jugador');
         $image.prop('src', imgUrl);
 
-        context.fillStyle = 'lightblue';
-        context.fillRect(0, 0, collisionBoxSidesLength[X_DIM],
-            collisionBoxSidesLength[Y_DIM]);
+        $('#bloque_jugador').css('background-color', 'lightblue');
 
         // Remember initial transformations (these are going to be altered)
         context.save();
@@ -479,34 +568,39 @@ $(function () {
             collisionBoxSidesLength[Y_DIM] / 2);
 
         if (!isInMirrorMode) {
-            // Mirror mode inverts horizontal dimension.
+            // Horizontal dimension is inverted.
             // Adjust this to fit brain intuition.
             context.scale(-1, 1);
         }
 
-        // Prepare rotation. This must be called before the actual drawing.
-        context.rotate(rotation);
+        // Magic starts happening here
+        context.scale(1 / horizontalRatio, 1);
 
-        context.drawImage($image[0], -qrSidesLength[X_DIM] / 2,
-            -qrSidesLength[Y_DIM] / 2, qrSidesLength[X_DIM],
-            qrSidesLength[Y_DIM]);
+        // Prepare rotation. This must be called before the actual drawing.
+        context.rotate(qrRotation);
+
+        context.drawImage($image[0], -squareShapedQrSideLength / 2,
+            -squareShapedQrSideLength / 2, squareShapedQrSideLength,
+            squareShapedQrSideLength);
 
         // Restore initial transformations to draw properly on next call
         context.restore();
 
         // Move the debug points in any case, to have them propery placed when
         // debug mode may be enabled later
-        $('#qr_bottom_left_point_debug').css(
-            {left: bottomLeftPoint.x, top: bottomLeftPoint.y}
-        );
+        $('#qr_bottom_left_point_debug').css({
+            left: scaledBottomLeftPoint[X_DIM],
+            top: scaledBottomLeftPoint[Y_DIM]
+        });
 
-        $('#qr_top_left_point_debug').css(
-            {left: topLeftPoint.x, top: topLeftPoint.y}
-        );
+        $('#qr_top_left_point_debug').css({
+            left: scaledTopLeftPoint[X_DIM],
+            top: scaledTopLeftPoint[Y_DIM]
+        });
 
-        $('#qr_top_right_point_debug').css(
-            {left: topRightPoint.x, top: topRightPoint.y}
-        );
+        $('#qr_top_right_point_debug').css({
+            left: scaledTopRightPoint[X_DIM], top: scaledTopRightPoint[Y_DIM]
+        });
     }
 
     function onIFrameMsg(event) {
@@ -523,7 +617,7 @@ $(function () {
             } case 'transform_player_block_from_qr': {
                 transformPlayerBlockFromQR(dataArray[1], dataArray[2],
                     dataArray[3], dataArray[4], dataArray[5], dataArray[6],
-                    dataArray[7], dataArray[8], dataArray[9]);
+                    dataArray[7]);
                 break;
             }
         }
@@ -534,7 +628,6 @@ $(function () {
     window.addEventListener('message', onIFrameMsg, false);
 
     // This event also ensures further postMessages will be always receiveable at this point
-    var encodedArray = JSON.stringify(['pong_video_dimensions', $('#video_camara').width(),
-        $('#video_camara').height()]);
+    var encodedArray = JSON.stringify(['pong_game_loaded']);
     window.parent.postMessage(encodedArray, '*');
 })

@@ -486,7 +486,7 @@ $(function () {
         // Step 1: Calculate the center of both QR code and AABB collision box
         let centralPoint = [
             (scaledBottomLeftPoint[X_DIM] + scaledTopRightPoint[X_DIM]) / 2,
-            (scaledBottomLeftPoint[X_DIM] + scaledTopRightPoint[Y_DIM]) / 2
+            (scaledBottomLeftPoint[Y_DIM] + scaledTopRightPoint[Y_DIM]) / 2
         ];
 
         // Step 2: Calculate the sides length of the AABB collision box

@@ -490,14 +490,14 @@ $(function () {
         ];
 
         // Step 2: Calculate the sides length of the AABB collision box
-        let vecPrerotatedQrHorizontalSide = [
+        let vecHorizontalQrSide = [
             (scaledTopLeftPoint[X_DIM] - scaledTopRightPoint[X_DIM])
             * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO,
             (scaledTopRightPoint[Y_DIM] - scaledTopLeftPoint[Y_DIM])
             * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO
         ];
 
-        let vecPrerotatedQrVerticalSide = [
+        let vecVerticalQrSide = [
             (scaledBottomLeftPoint[X_DIM] - scaledTopLeftPoint[X_DIM])
             * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO,
             (scaledBottomLeftPoint[Y_DIM] - scaledTopLeftPoint[Y_DIM])
@@ -505,46 +505,34 @@ $(function () {
         ];
 
         let collisionBoxSidesLength = [
-            Math.abs(vecPrerotatedQrHorizontalSide[X_DIM])
-            + Math.abs(vecPrerotatedQrVerticalSide[X_DIM]),
-            Math.abs(vecPrerotatedQrHorizontalSide[Y_DIM])
-            + Math.abs(vecPrerotatedQrVerticalSide[Y_DIM])
+            Math.abs(vecHorizontalQrSide[X_DIM])
+            + Math.abs(vecVerticalQrSide[X_DIM]),
+            Math.abs(vecHorizontalQrSide[Y_DIM])
+            + Math.abs(vecVerticalQrSide[Y_DIM])
         ];
 
-        // Step 3: Calculate the rotation of the QR code, scaling first the find
-        // pattern points to the original scale in order to rebuild the square.
-        // The horizontalRatio variable will be used later to scale and fit
-        // the squared QR into the collision box. This is a precise approach.
+        // Step 3: Calculate the rotation of the QR code, scaling first the
+        // horizontal vector to fit the original aspect ratio and get a squared shape.
+        // The horizontalRatio variable will be used later to scale and fit a
+        // squared QR image into the collision box. This is a precise approach.
         let horizontalRatio = origAspectRatio * $('#video_camara').height()
             / $('#video_camara').width();
 
-        let squareScaledTopLeftPoint = [
-            scaledTopLeftPoint[X_DIM] * horizontalRatio,
-            scaledTopLeftPoint[Y_DIM]
-        ];
-
-        let squareScaledTopRightPoint = [
-            scaledTopRightPoint[X_DIM] * horizontalRatio,
-            scaledTopRightPoint[Y_DIM]
-        ];
-
-        let vecSquareShapedQrSide = [
-            (squareScaledTopLeftPoint[X_DIM] - squareScaledTopRightPoint[X_DIM])
-            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO,
-            (squareScaledTopRightPoint[Y_DIM] - squareScaledTopLeftPoint[Y_DIM])
-            * QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO
+        let vecSquaredHorizontalQRSide = [
+            vecHorizontalQrSide[X_DIM] * horizontalRatio,
+            vecHorizontalQrSide[Y_DIM]
         ];
 
         if (isInMirrorMode) {
-            vecSquareShapedQrSide[X_DIM] *= -1;
+            vecSquaredHorizontalQRSide[X_DIM] *= -1;
         }
 
         let qrRotation = Math.atan2(
-            vecSquareShapedQrSide[Y_DIM], vecSquareShapedQrSide[X_DIM]
+            vecSquaredHorizontalQRSide[Y_DIM], vecSquaredHorizontalQRSide[X_DIM]
         );
 
         // Step 4: Calculate the side length of the square-shaped QR
-        let squareShapedQrSideLength = vecSquareShapedQrSide[X_DIM]
+        let squaredQrSideLength = vecSquaredHorizontalQRSide[X_DIM]
             / Math.cos(qrRotation);
 
         // Non-canvas transformations are ready at this moment, and we can draw.
@@ -579,9 +567,9 @@ $(function () {
         // Prepare rotation. This must be called before the actual drawing.
         context.rotate(qrRotation);
 
-        context.drawImage($image[0], -squareShapedQrSideLength / 2,
-            -squareShapedQrSideLength / 2, squareShapedQrSideLength,
-            squareShapedQrSideLength);
+        context.drawImage($image[0], -squaredQrSideLength / 2,
+            -squaredQrSideLength / 2, squaredQrSideLength,
+            squaredQrSideLength);
 
         // Restore initial transformations to draw properly on next call
         context.restore();

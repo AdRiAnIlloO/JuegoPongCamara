@@ -107,51 +107,49 @@ $(function () {
             rectangle.height() / 2
         ];
 
-        let maxCollisionDistances = [
-            halfRectangleDims[X_DIM] + ballRadius,
-            halfRectangleDims[Y_DIM] + ballRadius
-        ];
-
-        let rectangleCenter = [
+        let vecRectangleCenter = [
             newRectanglePos[X_DIM] + halfRectangleDims[X_DIM],
             newRectanglePos[Y_DIM] + halfRectangleDims[Y_DIM]
         ];
 
         for (let i = 0; i < 2; i++) {
-            if (Math.abs(rectangleCenter[i] - val)
-                > maxCollisionDistances[i])
+            let maxCollisionDistance = halfRectangleDims[i] + ballRadius;
+
+            if (Math.abs(vecRectangleCenter[i] - ballCenter[i])
+                > maxCollisionDistance)
             {
                 // No collision
                 return;
             }
         }
 
-        // Colisiones horizontales:
-        if (ballCenter[X_DIM] < rectangleCenter[X_DIM]) { // Colision izquierda
-            ballVel[X_DIM] = -Math.abs(ballVel[X_DIM])
-        } else { // Colision derecha
-            ballVel[X_DIM] = Math.abs(ballVel[X_DIM])
+        let vecRectangleSpeed = [
+            newRectanglePos[X_DIM] - rectangle.position().left,
+            newRectanglePos[Y_DIM] - rectangle.position().top
+        ];
+
+        // Dot product between static ricochet angle and rectangle's
+        let dot = 0;
+
+        for (let i = 0; i < 2; i++) {
+            let centerDistance = ballCenter[i] - vecRectangleCenter[i]
+
+            // Check if collision happened at least on the looping dimension
+            if (centerDistance >= halfRectangleDims[i]) {
+                ballVel[i] = Math.abs(ballVel[i]);
+            } else if (centerDistance <= -halfRectangleDims[i]) {
+                ballVel[i] = -Math.abs(ballVel[i]);
+            }
+
+            dot += centerDistance * vecRectangleSpeed[i];
         }
 
-        // Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
-        if ((ballCenter[X_DIM] < rectangleCenter[X_DIM])
-            == (newRectanglePos[X_DIM] < rectangle.position().left))
-        {
-            ballVel[X_DIM] += (newRectanglePos[X_DIM] - rectangle.position().left)
-        }
-
-        // Colisiones verticales:
-        if (ballCenter[Y_DIM] < rectangleCenter[Y_DIM]) { // Colision superior
-            ballVel[Y_DIM] = -Math.abs(ballVel[Y_DIM])
-        } else { // Colision inferior
-            ballVel[Y_DIM] = Math.abs(ballVel[Y_DIM])
-        }
-
-        // Potenciar velocidad de rebote horizontal si el bloque avanza en sentido opuesto:
-        if ((ballCenter[Y_DIM] < rectangleCenter[Y_DIM])
-            == (newRectanglePos[Y_DIM] < rectangle.position().top))
-        {
-            ballVel[Y_DIM] += (newRectanglePos[Y_DIM] - rectangle.position().top)
+        if (dot > 0) {
+            // The angle is < 90 degrees and only then we apply ricochet impulse,
+            // because we don't consider any friction or impact duration
+            for (let i = 0; i < 2; i++) {
+                ballVel[i] += vecRectangleSpeed[i];
+            }
         }
     }
 

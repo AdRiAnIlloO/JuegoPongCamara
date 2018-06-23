@@ -1,3 +1,9 @@
+/* Gotta set these to the window size, since these are used in bounds checks */
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
 body {
     background-image: url('../images/fondo.png');
     background-repeat: no-repeat;
@@ -7,7 +13,6 @@ body {
     background-size: cover;
     margin: 0px;
     padding: 0px;
-    height: 100%;
     overflow-y: hidden;
 }
 .elemento_absoluto {
@@ -40,11 +45,16 @@ body {
     font-family: verdana;
 }
 
-#video_camara {
+#video_camara, #video_camara2 {
     width: 50%;
     height: 100%;
     object-fit: fill;
     visibility: hidden;
+}
+
+#video_camara2 {
+    /* Move playable area of second player to the right half*/
+    left: 50%;
 }
 
 .marcador {
@@ -68,10 +78,11 @@ body {
     color: red;
 }
 
-#bloque_jugador {
-    width: 100px;
-    height: 100px;
+#bloque_jugador, #bloque_jugador2 {
+    background-color: lightgray;
     display: none;
+    height: 100px;
+    width: 100px;
 }
 
 #bola {
@@ -87,7 +98,7 @@ body {
     display: none;
 }
 
-#imagen_bloque_jugador {
+#imagen_bloque_jugador, #imagen_bloque_jugador2 {
     visibility: hidden;
 }
 

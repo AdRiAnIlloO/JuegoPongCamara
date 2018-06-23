@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Mini-juego QR</title>
-    <link rel="StyleSheet" type="text/CSS" href="css/style.css" />
+    <link rel="stylesheet" type="text/CSS" href="css/style.css" />
     <link rel="stylesheet" type="text/css" href="thirdparty/bootstrap/css/bootstrap.min.css" />
     <script type="text/javascript" src="thirdparty/jquery.min.js"></script>
     <script type="text/javascript" src="thirdparty/bootstrap/js/bootstrap.min.js"></script>
@@ -13,6 +13,7 @@
 </head>
 <body>
     <video id="video_camara" class="elemento_absoluto" autoplay loop muted></video>
+    <video id="video_camara2" class="elemento_absoluto" autoplay loop muted></video>
 
     <div id="ventana_login" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -24,15 +25,15 @@
                 <div class="modal-body">
                     <p id="texto_ayuda">Primero, debes seleccionar un modo de detecci&oacute;n</p>
                     <div class="form-group">
-                        <select id="game-mode-selection" class="form-control" form="game-config-form" autofocus
-                                required>
+                        <select id="game_detection_select" class="form-control"
+                        form="game-config-form" autofocus required>
                             <option value="">Selecciona modo de detecci&oacute;n...</option>
                             <option value="color">Detecci&oacute;n por color</option>
                             <option value="qr">Detecci&oacute;n por c&oacute;digo QR autenticado</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <select id="detection-secondary-selection" class="form-control">
+                        <select id="game_specific_select" class="form-control" required>
                             <option value="">Selecciona tipo espec&iacute;fico al modo de detecci&oacute;n</option>
                         </select>
                     </div>
@@ -50,6 +51,7 @@
     <div id="goles_jugador" class="marcador elemento_absoluto">0</div>
     <div id="goles_adversario" class="marcador elemento_absoluto">0</div>
     <canvas id="bloque_jugador" class="elemento_absoluto" width="100" height="100"></canvas>
+    <canvas id="bloque_jugador2" class="elemento_absoluto" width="100" height="100"></canvas>
     <canvas id="bola" class="elemento_absoluto"></canvas>
     <canvas id="bloque_adversario" class="elemento_absoluto"></canvas>
 
@@ -58,5 +60,6 @@
     <canvas id="qr_top_left_point_debug" class="elemento_absoluto" width="10" height="10"></canvas>
     <canvas id="qr_top_right_point_debug" class="elemento_absoluto" width="10" height="10"></canvas>
     <img id="imagen_bloque_jugador" />
+    <img id="imagen_bloque_jugador2" />
 </body>
 </html>

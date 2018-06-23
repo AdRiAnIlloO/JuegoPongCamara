@@ -7,12 +7,13 @@ var g_FPS = 60;
 var g_isTrackingImageExternally = false;
 
 var g_isInDebug = false;
-
 var g_isInQrDetectionMode = false;
 
 // Ratio between the length of a QR side and that of the line between the
 // centers of the find pattern pair present on that side
 const QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO = (29 / 23);
+
+let g_OpponentObject = null;
 
 $(function () {
     const X_DIM = 0;
@@ -24,6 +25,92 @@ $(function () {
 	opponentYVel = 300 // Velocidad maxima vertical del adversario (pixeles / segundo)
 
     ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
+
+    // Simulates a class for dynamic dispatching actions on singleplayer context
+    function SingleplayerOpponent() {
+        this.pos = Array(2);
+    }
+
+    SingleplayerOpponent.prototype.reset = function() {
+        this.pos[X_DIM] = $('html').width() - $('#bloque_adversario').width();
+        this.pos[Y_DIM] = ($('html').height() - $('#bloque_adversario').height()) / 2;
+        this.updateRenderedPos();
+    };
+
+    SingleplayerOpponent.prototype.calcDesiredPos = function(newBallYCenter) {
+        let halfHeight = $('#bloque_adversario').height() / 2;
+        let newYCenter = this.pos[Y_DIM] + halfHeight;
+
+        // Bloque del adversario: caso bola por encima o por debajo.
+        // Se limita el incremento de posicion, puesto que si no, el oponente
+        // oscila ilimitadamente en algunos casos.
+        if (newYCenter > newBallYCenter) {
+            this.pos[Y_DIM] = Math.max(
+                newYCenter - opponentYVel / g_FPS, newBallYCenter
+            ) - halfHeight;
+        } else if (newYCenter < newBallYCenter) {
+            this.pos[Y_DIM] = Math.min(
+                newYCenter + opponentYVel / g_FPS, newBallYCenter
+            ) - halfHeight;
+        }
+    };
+
+    SingleplayerOpponent.prototype.ensureWithinBounds = function() {
+        ensureObjectWithinBounds($('#bloque_adversario'), this.pos, $('html'));
+    };
+
+    SingleplayerOpponent.prototype.handleBallCollision =
+    function(ballCenter, ballRadius) {
+         // Ball - AI
+        handleCollision(
+            ballCenter, ballRadius, $('#bloque_adversario'), this.pos
+        );
+    };
+
+    SingleplayerOpponent.prototype.updateRenderedPos = function() {
+        $('#bloque_adversario').css({
+            left: this.pos[X_DIM], top: this.pos[Y_DIM]
+        });
+    }
+
+    // Simulates a class for dynamic dispatching actions on multiplayer context
+    function MultiplayerOpponent() {
+        this.pos = Array(2);
+        this.center = Array(2);
+    }
+
+    // Reuses main player center, which should have been set already
+    MultiplayerOpponent.prototype.reset = function(mainPlayerCenter) {
+        this.center = [
+            $('html').width() - mainPlayerCenter[X_DIM],
+            mainPlayerCenter[Y_DIM]
+        ];
+        this.calcDesiredPos();
+        this.updateRenderedPos();
+    };
+
+    MultiplayerOpponent.prototype.calcDesiredPos = function() {
+        this.pos[X_DIM] = this.center[X_DIM] - $('#bloque_jugador2').width() / 2;
+        this.pos[Y_DIM] = this.center[Y_DIM] - $('#bloque_jugador2').height() / 2;
+    };
+
+    MultiplayerOpponent.prototype.ensureWithinBounds = function() {
+        ensureObjectWithinBounds($('#bloque_jugador2'), this.pos, $('#video_camara2'));
+    };
+
+    MultiplayerOpponent.prototype.handleBallCollision =
+    function(ballCenter, ballRadius) {
+        // Ball - second player
+        handleCollision(
+            ballCenter, ballRadius, $('#bloque_jugador2'), this.pos
+        );
+    };
+
+    MultiplayerOpponent.prototype.updateRenderedPos = function() {
+        $('#bloque_jugador2').css({
+            left: this.pos[X_DIM], top: this.pos[Y_DIM]
+        });
+    };
 
     HighestColorTracker = function () {
         HighestColorTracker.base(this, 'constructor')
@@ -49,9 +136,13 @@ $(function () {
 
     function resetAllObjects() {
         ballVel = [0, 0]
+
+        g_DesiredPlayerCenter[X_DIM] = $('html').width() / 4;
+        g_DesiredPlayerCenter[Y_DIM] = $('html').height() / 2;
+
         let playerCoords = [
-            $(window).width() / 4 - $('#bloque_jugador').width() / 2,
-            ($(window).height() - $('#bloque_jugador').height()) / 2
+            g_DesiredPlayerCenter[X_DIM] - $('#bloque_jugador').width() / 2,
+            g_DesiredPlayerCenter[Y_DIM] - $('#bloque_jugador').height() / 2
         ];
 
         $('#bloque_jugador').css({
@@ -59,18 +150,12 @@ $(function () {
             top: playerCoords[Y_DIM]
         })
 
-        g_DesiredPlayerCenter[X_DIM] = $(window).width() / 4;
-        g_DesiredPlayerCenter[Y_DIM] = $(window).height() / 2;
-
         $('#bola').css({
-            left: ($(window).width() - $('#bola').width()) / 2,
-            top: ($(window).height() - $('#bola').height()) / 2
+            left: ($('html').width() - $('#bola').width()) / 2,
+            top: ($('html').height() - $('#bola').height()) / 2
         })
 
-        $('#bloque_adversario').css({
-            left: $(window).width() - $('#bloque_adversario').width(),
-            top: ($(window).height() - $('#bloque_adversario').height()) / 2
-        })
+        g_OpponentObject.reset(g_DesiredPlayerCenter);
 
         $('#qr_bottom_left_point_debug').css({
             left: playerCoords[X_DIM],
@@ -153,36 +238,40 @@ $(function () {
         }
     }
 
-    // El inicio de las dimensiones del contenedor se presupone a partir de los bordes
-    // izquierdo y superior del DOM (ya que se enviaran bien las dimensiones de la camara o del html).
     // Devuelve > 0 si hay que reiniciar los objetos (punto marcado), 0 en caso contrario:
-    function ensureObjectWithinBounds(object, newObjectPos, container) {
-        if (newObjectPos[X_DIM] < 0) {
-            newObjectPos[X_DIM] = 0
+    function ensureObjectWithinBounds($object, newObjectPos, $container) {
+        // Right and bottom positions
+        let containerLimits = [
+            $container.position().left + $container.width(),
+            $container.position().top + $container.height()
+        ];
 
-            if (object.attr('id') == 'bola') {
+        if (newObjectPos[X_DIM] < $container.position().left) {
+            newObjectPos[X_DIM] = $container.position().left;
+
+            if ($object.prop('id') == 'bola') {
                 ballVel[X_DIM] = Math.abs(ballVel[X_DIM])
                 return OPPONENT_SCORED
             }
-        } else if (newObjectPos[X_DIM] + object.width() > container.width()) {
-            newObjectPos[X_DIM] = container.width() - object.width()
+        } else if (newObjectPos[X_DIM] + $object.width() > containerLimits[X_DIM]) {
+            newObjectPos[X_DIM] = $container.width() - $object.width()
 
-            if (object.attr('id') == 'bola') {
+            if ($object.prop('id') == 'bola') {
                 ballVel[X_DIM] = -Math.abs(ballVel[X_DIM])
                 return PLAYER_SCORED
             }
         }
 
-        if (newObjectPos[Y_DIM] < 0) {
-            newObjectPos[Y_DIM] = 0
+        if (newObjectPos[Y_DIM] < $container.position().top) {
+            newObjectPos[Y_DIM] = $container.position().top;
 
-            if (object.attr('id') == 'bola') {
+            if ($object.prop('id') == 'bola') {
                 ballVel[Y_DIM] = Math.abs(ballVel[Y_DIM])
             }
-        } else if (newObjectPos[Y_DIM] + object.height() > container.height()) {
-            newObjectPos[Y_DIM] = container.height() - object.height()
+        } else if (newObjectPos[Y_DIM] + $object.height() > containerLimits[Y_DIM]) {
+            newObjectPos[Y_DIM] = containerLimits[Y_DIM] - $object.height()
 
-            if (object.attr('id') == 'bola') {
+            if ($object.prop('id') == 'bola') {
                 ballVel[Y_DIM] = -Math.abs(ballVel[Y_DIM])
             }
         }
@@ -193,7 +282,7 @@ $(function () {
     HighestColorTracker.prototype.track = function (pixels, width, height) {
         color = [0, 0, 0]
 
-        switch ($('#detection-secondary-selection').val()) {
+        switch ($('#game_specific_select').val()) {
             case 'rojo': {
                 color = [255, 0, 0]
                 break
@@ -234,20 +323,12 @@ $(function () {
         })
     }
 
-    function tickSimulate(x, y) {
+    function tickSimulate() {
         // Centrar el bloque del jugador en la coordenada detectada:
         let newPlayerPos = [
-            x - ($('#bloque_jugador').width() / 2),
-            y - ($('#bloque_jugador').height() / 2)
+            g_DesiredPlayerCenter[X_DIM] - ($('#bloque_jugador').width() / 2),
+            g_DesiredPlayerCenter[Y_DIM] - ($('#bloque_jugador').height() / 2)
         ];
-
-        let newOpponentPos = [
-            $('#bloque_adversario').position().left,
-            $('#bloque_adversario').position().top
-        ];
-
-        let halfOpponentHeight = $('#bloque_adversario').height() / 2;
-        let newOpponentYCenter = newOpponentPos[Y_DIM] + halfOpponentHeight;
 
         newBallPos = [
             $('#bola').position().left + ballVel[X_DIM],
@@ -257,18 +338,7 @@ $(function () {
         let ballRadius = $('#bola').width() / 2;
         let newBallYCenter = newBallPos[Y_DIM] + ballRadius;
 
-        // Bloque del adversario: caso bola por encima o por debajo.
-        // Se limita el incremento de posicion, puesto que si no, el oponente
-        // oscila ilimitadamente en algunos casos.
-        if (newOpponentYCenter > newBallYCenter) {
-            newOpponentPos[Y_DIM] = Math.max(
-                newOpponentYCenter - opponentYVel / g_FPS, newBallYCenter
-            ) - halfOpponentHeight;
-        } else if (newOpponentYCenter < newBallYCenter) {
-            newOpponentPos[Y_DIM] = Math.min(
-                newOpponentYCenter + opponentYVel / g_FPS, newBallYCenter
-            ) - halfOpponentHeight;
-        }
+        g_OpponentObject.calcDesiredPos(newBallYCenter);
 
         if (g_isInQrDetectionMode) {
             if (g_isInDebug) {
@@ -283,7 +353,7 @@ $(function () {
         }
 
         // Asegurar contencion de objetos dentro de los limites:
-        switch (ensureObjectWithinBounds($('#bola'), newBallPos, $(window), ballVel)) {
+        switch (ensureObjectWithinBounds($('#bola'), newBallPos, $('html'))) {
             case PLAYER_SCORED: {
                     curPlayerScore = $('#goles_jugador').text()
                     curPlayerScore++
@@ -314,8 +384,8 @@ $(function () {
                 }
         }
 
-        ensureObjectWithinBounds($('#bloque_jugador'), newPlayerPos, $('#video_camara'))
-        ensureObjectWithinBounds($('#bloque_adversario'), newOpponentPos, $(window))
+        ensureObjectWithinBounds($('#bloque_jugador'), newPlayerPos, $('#video_camara'));
+        g_OpponentObject.ensureWithinBounds();
 
         // Actualizar bola:
         $('#bola').css({ left: newBallPos[X_DIM], top: newBallPos[Y_DIM] })
@@ -328,13 +398,15 @@ $(function () {
 
         // Colisionar, enviando los objetos DOM, teniendo asi
         // la informacion necesaria de las posiciones anteriores:
-        handleCollision(ballCenter, ballRadius, $('#bloque_jugador'), newPlayerPos) // Bola - jugador
-        handleCollision(ballCenter, ballRadius, $('#bloque_adversario'), newOpponentPos) // Bola - adversario
+        handleCollision(ballCenter, ballRadius, $('#bloque_jugador'), newPlayerPos);
+        g_OpponentObject.handleBallCollision(ballCenter, ballRadius);
 
         // Actualizar posicion de los rectangulos
         // (necesario despues del colisionado, ver arriba):
-        $('#bloque_jugador').css({ left: newPlayerPos[X_DIM], top: newPlayerPos[Y_DIM] })
-        $('#bloque_adversario').css({ top: newOpponentPos[Y_DIM] })
+        $('#bloque_jugador').css({
+            left: newPlayerPos[X_DIM], top: newPlayerPos[Y_DIM]
+        });
+        g_OpponentObject.updateRenderedPos();
 
         // Limitar la velocidad maxima para no crear el caos,
         // calculandola primero (pixeles / frame):
@@ -352,25 +424,19 @@ $(function () {
         context.clearRect(0, 0, $('#bloque_jugador').width(), $('#bloque_jugador').height());
     }
 
-    function resizePlayerBlock(width, height) {
-        $('#bloque_jugador').width(width);
-        $('#bloque_jugador').height(height);
-        $('#bloque_jugador').prop('width', width);
-        $('#bloque_jugador').prop('height', height);
+    function resizePlayerBlock($canvasObj, width, height) {
+        $canvasObj.width(width);
+        $canvasObj.height(height);
+        $canvasObj.prop('width', width);
+        $canvasObj.prop('height', height);
     }
 
     function setExternalCameraTracking() {
         g_isTrackingImageExternally = true;
 
         // For now, remove color detection mode, as it's only called when QR mode is wanted
-        $('#game-mode-selection option[value="color"]').remove();
+        $('#game_detection_select option[value="color"]').remove();
     }
-
-    // Set up tick simulation to be last forever to don't stop simulating.
-    // This is called exactly each FPS cycle so this deals automatically with possible empty times on each frame.
-    setInterval(function () {
-        tickSimulate(g_DesiredPlayerCenter[X_DIM], g_DesiredPlayerCenter[Y_DIM]);
-    }, Math.pow(10, 3) / g_FPS);
 
     $('body').on('clear_player_block', clearPlayerBlock);
     $('body').on('set_external_camera_tracking', setExternalCameraTracking);
@@ -385,20 +451,28 @@ $(function () {
         $('#texto_ayuda').toggle();
     });
 
-    var defaultHelpDisplay = $('#texto_ayuda').html();
+    let defaultHelpDisplay = $('#texto_ayuda').html();
+    let defaultSecondaryModeDisplay = $(
+        '#game_specific_select option[value=""]'
+    ).html();
 
-    $('#game-mode-selection').change(function () {
-        switch ($('#game-mode-selection :selected').val()) {
+    $('#game_detection_select').change(function () {
+        $('#game_specific_select option[value!=""]').remove();
+
+        switch ($('#game_detection_select').val()) {
             case 'color': {
-                $('#detection-secondary-selection').prop('required', true);
+                $('#game_specific_select').prop('required', true);
 
-                // If secondary options only has one element (the default placeholder):
-                if ($('#detection-secondary-selection option').length < 2) {
-                    // Then, add the color tracking choices
-                    $('#detection-secondary-selection').append('<option value="rojo">Rojo</option>');
-                    $('#detection-secondary-selection').append('<option value="verde">Verde</option>');
-                    $('#detection-secondary-selection').append('<option value="azul">Azul</option>');
-                }
+                // Add the color tracking choices
+                $('#game_specific_select').append(
+                    new Option("Rojo", 'rojo')
+                );
+                $('#game_specific_select').append(
+                    new Option("Verde", 'verde')
+                );
+                $('#game_specific_select').append(
+                    new Option("Azul", 'azul')
+                );
 
                 $('#texto_ayuda').html("El juego buscar&aacute; a trav&eacute;s de la c&aacute;mara objetos del color "
                     + "que selecciones para mover el jugador. Es recomendable que muestres la menor proporci&oacute;n "
@@ -407,15 +481,29 @@ $(function () {
                     + "de punta a la c&aacute;mara.");
                 break;
             } case 'qr': {
-                $('#detection-secondary-selection').prop('required', false);
-                $('#detection-secondary-selection option[value!=""]').remove();
+                $('#game_specific_select').prop('required', true);
+                $('#game_specific_select option[value=""]').html(
+                    "Selecciona el número de jugadores"
+                );
+
+                // Add the player amount choices
+                $('#game_specific_select').append(
+                    new Option("Un jugador", 'individual')
+                );
+                $('#game_specific_select').append(
+                    new Option("Dos jugadores (local)", 'multijugador')
+                );
+
                 $('#texto_ayuda').html("El juego realizar&aacute; un seguimiento a trav&eacute;s de la c&aacute;mara "
                     + "del c&oacute;digo QR asociado a tu cuenta actualmente identificada en la Web, actualizando "
                     + "en tiempo real la posici&oacute;n del bloque jugador acorde a la posici&oacute;n de tu "
                     + "c&oacute;digo QR con respecto al espacio capturado por la c&aacute;mara");
                 break;
             } default: {
-                $('#detection-secondary-selection').prop('required', false);
+                $('#game_specific_select').prop('required', false);
+                $('#game_specific_select option[value=""]').html(
+                    defaultSecondaryModeDisplay
+                );
                 $('#texto_ayuda').html(defaultHelpDisplay);
             }
         }
@@ -424,19 +512,32 @@ $(function () {
     $('#game-config-form').submit(function (event) {
         $(this).animate({ opacity: 0 }, function () {
             $('#ventana_login').animate({ opacity: 0 }, function () {
+                // Completar desactivacion del renderizado
+                $(this).hide();
+
+                if ($('#game_detection_select').val() === 'qr') {
+                    g_isInQrDetectionMode = true;
+                }
+
+                if ($('#game_specific_select').val() === 'multijugador') {
+                    g_OpponentObject = new MultiplayerOpponent();
+                    $('#bloque_jugador2').show();
+
+                    // We want to allow a second user, notify the authentication layer
+                    window.parent.postMessage(
+                        JSON.stringify(['add_session_user_slot']), '*'
+                    );
+                } else {
+                    g_OpponentObject = new SingleplayerOpponent();
+                    $('#bloque_adversario').show()
+                }
+
                 $(this).modal('hide');
                 $('.marcador').show()
                 resetAllObjects()
 
-                // Desactivar visualizacion de la forma debida, por si acaso:
-                $(this).css('display', 'none')
-
-                if ($('#game-mode-selection').val() === 'qr') {
-                    g_isInQrDetectionMode = true;
-                }
-
-                // Configurar bloque del jugador:
-                switch ($('#detection-secondary-selection').val()) {
+                // Configurar bloque de el/los jugador/es:
+                switch ($('#game_specific_select').val()) {
                     case 'rojo': {
                         $('#bloque_jugador').css('background-color', 'red')
                         break
@@ -446,8 +547,6 @@ $(function () {
                     } case 'azul': {
                         $('#bloque_jugador').css('background-color', 'blue')
                         break
-                    } default: {
-                        $('#bloque_jugador').css('background-color', 'lightgray')
                     }
                 }
 
@@ -468,9 +567,8 @@ $(function () {
                 ctx.stroke()
 
                 $('#bola').show()
-                $('#bloque_adversario').show()
 
-                if (!g_isTrackingImageExternally && $('#game-mode-selection :selected').val() === 'color') {
+                if (!g_isTrackingImageExternally && $('#game_detection_select').val() === 'color') {
                     tracking.track('#video_camara', colorTracker, { camera: true })
                 }
 
@@ -480,6 +578,12 @@ $(function () {
                     annyang.setLanguage('es-ES')
                     annyang.start()
                 }
+
+                // Set up tick simulation to be last forever to don't stop simulating.
+                // This is called exactly each FPS cycle so this deals automatically with possible empty times on each frame.
+                setInterval(function () {
+                    tickSimulate();
+                }, Math.pow(10, 3) / g_FPS);
             })
         })
 
@@ -491,8 +595,8 @@ $(function () {
     ////////////               Iframe fallbacks               ////////////
     //////////////////////////////////////////////////////////////////////
 
-    function transformPlayerBlockFromQR(isInMirrorMode, imgUrl, origAspectRatio,
-        qrCaptureDims, bottomLeftPoint, topLeftPoint, topRightPoint)
+    function transformPlayerBlockFromQR(userSessionSlot, isInMirrorMode, imgUrl,
+        origAspectRatio, qrCaptureDims, bottomLeftPoint, topLeftPoint, topRightPoint)
     {
         // This block first calculates non-canvas transformations
 
@@ -570,17 +674,33 @@ $(function () {
             / Math.cos(qrRotation);
 
         // Non-canvas transformations are ready at this moment, and we can draw.
-        // Set auxiliar player block center for next frame.
-        g_DesiredPlayerCenter = centralPoint;
 
-        resizePlayerBlock(collisionBoxSidesLength[X_DIM],
+        let $canvasObj, $imageObj;
+
+        if (userSessionSlot == 0) {
+            // Set auxiliar player block center for next frame
+            g_DesiredPlayerCenter = centralPoint;
+
+            $canvasObj = $('#bloque_jugador');
+            $imageObj = $('#imagen_bloque_jugador');
+        } else {
+            // Set auxiliar player block center for next frame
+            g_OpponentObject.center = [
+                centralPoint[X_DIM] + $('#video_camara').width(),
+                centralPoint[Y_DIM]
+            ];
+
+            $canvasObj = $('#bloque_jugador2');
+            $imageObj = $('#imagen_bloque_jugador2');
+        }
+
+        resizePlayerBlock($canvasObj, collisionBoxSidesLength[X_DIM],
             collisionBoxSidesLength[Y_DIM]);
 
-        let context = $('#bloque_jugador')[0].getContext('2d');
-        let $image = $('#imagen_bloque_jugador');
-        $image.prop('src', imgUrl);
+        let context = $canvasObj[0].getContext('2d');
+        $imageObj.prop('src', imgUrl);
 
-        $('#bloque_jugador').css('background-color', 'lightblue');
+        $canvasObj.css('background-color', 'lightblue');
 
         // Remember initial transformations (these are going to be altered)
         context.save();
@@ -601,7 +721,7 @@ $(function () {
         // Prepare rotation. This must be called before the actual drawing.
         context.rotate(qrRotation);
 
-        context.drawImage($image[0], -squaredQrSideLength / 2,
+        context.drawImage($imageObj[0], -squaredQrSideLength / 2,
             -squaredQrSideLength / 2, squaredQrSideLength,
             squaredQrSideLength);
 
@@ -639,7 +759,7 @@ $(function () {
             } case 'transform_player_block_from_qr': {
                 transformPlayerBlockFromQR(dataArray[1], dataArray[2],
                     dataArray[3], dataArray[4], dataArray[5], dataArray[6],
-                    dataArray[7]);
+                    dataArray[7], dataArray[8]);
                 break;
             }
         }

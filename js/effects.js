@@ -325,20 +325,25 @@ $(function () {
 
         g_OpponentObject.calcDesiredPos(newBallYCenter);
 
-        if ($('#bloque_jugador')[0].debugPoints != null) {
-            let fillStyles = ['yellow', 'orange', 'red', 'magenta'];
-            let context = $('#bloque_jugador')[0].getContext('2d');
-            console.log($('#bloque_jugador')[0].debugPoints);
+        if (g_IsInDebug) {
+            let $canvasObjs = [$('#bloque_jugador'), $('#bloque_jugador2')];
 
-            $('#bloque_jugador')[0].debugPoints.forEach((point, index) => {
-                context.beginPath();
-                context.arc(point[X_DIM], point[Y_DIM], 5, 0, 2 * Math.PI);
-                context.fillStyle = fillStyles[index];
-                context.fill();
-                context.closePath();
+            $canvasObjs.forEach($canvasObj => {
+                let fillStyles = ['yellow', 'orange', 'red'];
+                let context = $canvasObj[0].getContext('2d');
+
+                if ($canvasObj[0].debugPoints != null) {
+                    $canvasObj[0].debugPoints.forEach((point, index) => {
+                        context.beginPath();
+                        context.arc(point[X_DIM], point[Y_DIM], 5, 0, 2 * Math.PI);
+                        context.fillStyle = fillStyles[index];
+                        context.fill();
+                        context.closePath();
+                    });
+
+                    $canvasObj[0].debugPoints = null;
+                }
             });
-
-            $('#bloque_jugador')[0].debugPoints = null;
         }
 
         // Asegurar contencion de objetos dentro de los limites:
@@ -664,23 +669,25 @@ $(function () {
 
         // Non-canvas transformations are ready at this moment, and we can draw.
 
-        let $canvasObj, $imageObj;
+        let $canvasObj, $imageObj, $videoCamObj;
 
         if (userSessionSlot == 0) {
-            // Set auxiliar player block center for next frame
-            g_DesiredPlayerCenter = centralPoint;
-
             $canvasObj = $('#bloque_jugador');
             $imageObj = $('#imagen_bloque_jugador');
-        } else {
-            // Set auxiliar player block center for next frame
-            g_OpponentObject.center = [
-                centralPoint[X_DIM] + $('#video_camara').width(),
-                centralPoint[Y_DIM]
-            ];
+            $videoCamObj = $('#video_camara');
 
+            // Set auxiliar player block center for next frame
+            g_DesiredPlayerCenter = centralPoint;
+        } else {
             $canvasObj = $('#bloque_jugador2');
             $imageObj = $('#imagen_bloque_jugador2');
+            $videoCamObj = $('#video_camara2');
+
+            // Set auxiliar player block center for next frame
+            g_OpponentObject.center = [
+                centralPoint[X_DIM] + $videoCamObj.width(),
+                centralPoint[Y_DIM]
+            ];
         }
 
         resizePlayerBlock($canvasObj, collisionBoxSidesLength[X_DIM],
@@ -721,15 +728,18 @@ $(function () {
         // yet, to have these points properly placed when debug activates
         $canvasObj[0].debugPoints = [
             [
-                scaledBottomLeftPoint[X_DIM] - $canvasObj.position().left,
+                $videoCamObj.position().left + scaledBottomLeftPoint[X_DIM]
+                - $canvasObj.position().left,
                 scaledBottomLeftPoint[Y_DIM] - $canvasObj.position().top
             ],
             [
-                scaledTopLeftPoint[X_DIM] - $canvasObj.position().left,
+                $videoCamObj.position().left + scaledTopLeftPoint[X_DIM]
+                - $canvasObj.position().left,
                 scaledTopLeftPoint[Y_DIM] - $canvasObj.position().top
             ],
             [
-                scaledTopRightPoint[X_DIM] - $canvasObj.position().left,
+                $videoCamObj.position().left + scaledTopRightPoint[X_DIM]
+                - $canvasObj.position().left,
                 scaledTopRightPoint[Y_DIM] - $canvasObj.position().top
             ]
         ];

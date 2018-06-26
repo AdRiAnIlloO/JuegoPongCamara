@@ -6,7 +6,7 @@ var g_FPS = 60;
 // This determines whether to track image from Pong layer (default) or from an external layer
 var g_isTrackingImageExternally = false;
 
-var g_isInDebug = false;
+var g_IsInDebug = false;
 var g_isInQrDetectionMode = false;
 
 // Ratio between the length of a QR side and that of the line between the
@@ -156,21 +156,6 @@ $(function () {
         })
 
         g_OpponentObject.reset(g_DesiredPlayerCenter);
-
-        $('#qr_bottom_left_point_debug').css({
-            left: playerCoords[X_DIM],
-            top: playerCoords[Y_DIM] + $('#bloque_jugador').height()
-        });
-
-        $('#qr_top_left_point_debug').css({
-            left: playerCoords[X_DIM],
-            top: playerCoords[Y_DIM]
-        });
-
-        $('#qr_top_right_point_debug').css({
-            left: playerCoords[X_DIM] + $('#bloque_jugador').width(),
-            top: playerCoords[Y_DIM]
-        });
     }
 
     // Obtiene la distancia del color en un pixel respecto
@@ -340,16 +325,20 @@ $(function () {
 
         g_OpponentObject.calcDesiredPos(newBallYCenter);
 
-        if (g_isInQrDetectionMode) {
-            if (g_isInDebug) {
-                $('#qr_bottom_left_point_debug').show();
-                $('#qr_top_left_point_debug').show();
-                $('#qr_top_right_point_debug').show();
-            } else {
-                $('#qr_bottom_left_point_debug').hide();
-                $('#qr_top_left_point_debug').hide();
-                $('#qr_top_right_point_debug').hide();
-            }
+        if ($('#bloque_jugador')[0].debugPoints != null) {
+            let fillStyles = ['yellow', 'orange', 'red', 'magenta'];
+            let context = $('#bloque_jugador')[0].getContext('2d');
+            console.log($('#bloque_jugador')[0].debugPoints);
+
+            $('#bloque_jugador')[0].debugPoints.forEach((point, index) => {
+                context.beginPath();
+                context.arc(point[X_DIM], point[Y_DIM], 5, 0, 2 * Math.PI);
+                context.fillStyle = fillStyles[index];
+                context.fill();
+                context.closePath();
+            });
+
+            $('#bloque_jugador')[0].debugPoints = null;
         }
 
         // Asegurar contencion de objetos dentro de los limites:
@@ -728,21 +717,22 @@ $(function () {
         // Restore initial transformations to draw properly on next call
         context.restore();
 
-        // Move the debug points in any case, to have them propery placed when
-        // debug mode may be enabled later
-        $('#qr_bottom_left_point_debug').css({
-            left: scaledBottomLeftPoint[X_DIM],
-            top: scaledBottomLeftPoint[Y_DIM]
-        });
-
-        $('#qr_top_left_point_debug').css({
-            left: scaledTopLeftPoint[X_DIM],
-            top: scaledTopLeftPoint[Y_DIM]
-        });
-
-        $('#qr_top_right_point_debug').css({
-            left: scaledTopRightPoint[X_DIM], top: scaledTopRightPoint[Y_DIM]
-        });
+        // Prepare debugging points transport array, even if we are not in debug
+        // yet, to have these points properly placed when debug activates
+        $canvasObj[0].debugPoints = [
+            [
+                scaledBottomLeftPoint[X_DIM] - $canvasObj.position().left,
+                scaledBottomLeftPoint[Y_DIM] - $canvasObj.position().top
+            ],
+            [
+                scaledTopLeftPoint[X_DIM] - $canvasObj.position().left,
+                scaledTopLeftPoint[Y_DIM] - $canvasObj.position().top
+            ],
+            [
+                scaledTopRightPoint[X_DIM] - $canvasObj.position().left,
+                scaledTopRightPoint[Y_DIM] - $canvasObj.position().top
+            ]
+        ];
     }
 
     function onIFrameMsg(event) {

@@ -101,20 +101,3 @@ body {
 #imagen_bloque_jugador, #imagen_bloque_jugador2 {
     visibility: hidden;
 }
-
-#qr_bottom_left_point_debug {
-    background-color: yellow;
-}
-
-#qr_top_left_point_debug {
-    background-color: orange;
-}
-
-#qr_top_right_point_debug {
-    background-color: red;
-}
-
-#qr_bottom_left_point_debug, #qr_top_left_point_debug,
-#qr_top_right_point_debug {
-    display: hidden;
-}

@@ -16,7 +16,7 @@ const QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO = (29 / 23);
 let g_OpponentObject = null;
 
 // Allows calculating elapsed times to call simulation ticks
-let lastSimulateMsTime;
+let g_LastSimulateMsTime;
 
 $(function () {
     const X_DIM = 0;
@@ -417,10 +417,10 @@ $(function () {
     }
 
     function handleTick() {
-        if (Date.now() - lastSimulateMsTime >= 1000 / g_FPS)
+        if (Date.now() - g_LastSimulateMsTime >= 1000 / g_FPS)
         {
             tickSimulate();
-            lastSimulateMsTime = Date.now();
+            g_LastSimulateMsTime = Date.now();
         }
 
         _requestAnimationFrame(handleTick);
@@ -589,7 +589,7 @@ $(function () {
 
                 // Set up tick simulation to be last forever to don't stop simulating.
                 // This is called exactly each FPS cycle so this deals automatically with possible empty times on each frame.
-                lastSimulateMsTime = Date.now();
+                g_LastSimulateMsTime = Date.now();
                 handleTick();
             })
         })

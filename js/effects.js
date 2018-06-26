@@ -15,6 +15,9 @@ const QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO = (29 / 23);
 
 let g_OpponentObject = null;
 
+// Allows calculating elapsed times to call simulation ticks
+let lastSimulateMsTime;
+
 $(function () {
     const X_DIM = 0;
     const Y_DIM = 1;
@@ -413,6 +416,17 @@ $(function () {
         }
     }
 
+    function handleTick() {
+        if (Date.now() - lastSimulateMsTime >= 1000 / g_FPS)
+        {
+            tickSimulate();
+            lastSimulateMsTime = Date.now();
+        }
+
+        _requestAnimationFrame(handleTick);
+    }
+
+
     function clearPlayerBlock() {
         context = $('#bloque_jugador')[0].getContext('2d');
         context.clearRect(0, 0, $('#bloque_jugador').width(), $('#bloque_jugador').height());
@@ -575,9 +589,8 @@ $(function () {
 
                 // Set up tick simulation to be last forever to don't stop simulating.
                 // This is called exactly each FPS cycle so this deals automatically with possible empty times on each frame.
-                setInterval(function () {
-                    tickSimulate();
-                }, Math.pow(10, 3) / g_FPS);
+                lastSimulateMsTime = Date.now();
+                handleTick();
             })
         })
 

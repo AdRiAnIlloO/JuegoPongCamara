@@ -536,8 +536,13 @@ $(function () {
                     }
                 }
 
-                for (let i = 1; i < g_PongPlayersList.length; i++) {
-                    // We want to allow another user, notify the authentication layer
+                // Prepare list of human players to help in calculating extra slots neatly
+                let humanPongPlayers = g_PongPlayersList.filter((pongPlayer) =>
+                    (pongPlayer.constructor.name === 'HumanPongPlayer')
+                );
+
+                for (let i = 1; i < humanPongPlayers.length; i++) {
+                    // Allow another session User: notify the authentication layer
                     window.parent.postMessage(
                         JSON.stringify(['add_session_user_slot']), '*'
                     );

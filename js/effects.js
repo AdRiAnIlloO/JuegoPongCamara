@@ -1,119 +1,125 @@
-// Desired player block position from game control interfaces (Camera color, QR scanning...)
-var g_DesiredPlayerCenter = [0, 0]
+const X_DIM = 0;
+const Y_DIM = 1;
 
 var g_FPS = 60;
+
+g_OpponentYVel = 300 // Max. AI player vertical speed (pixels / second)
 
 // This determines whether to track image from Pong layer (default) or from an external layer
 var g_isTrackingImageExternally = false;
 
 var g_IsInDebug = false;
-var g_isInQrDetectionMode = false;
 
 // Ratio between the length of a QR side and that of the line between the
 // centers of the find pattern pair present on that side
 const QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO = (29 / 23);
 
-let g_OpponentObject = null;
-
 // Allows calculating elapsed times to call simulation ticks
 let g_LastSimulateMsTime;
 
-$(function () {
-    const X_DIM = 0;
-    const Y_DIM = 1;
+class PongPlayer {
+    constructor($canvas, $video) {
+        this.$canvas = $canvas;
+        this.$video = $video;
+        this.isReady = false; // True when an attached User is connected
+        this.initialPos = [$canvas.css('left'), $canvas.css('top')];
+        this.pos = this.initialPos;
+        this.$canvas.show();
+    }
 
+    drawQrPoints() {
+        // Nothing -- Polymorphic function, defined here for successful runtime
+    }
+
+    updateCenter() {
+        // Nothing -- Polymorphic function, defined here for successful runtime
+    }
+
+    render() {
+        this.$canvas.css('left', this.pos[X_DIM]);
+        this.$canvas.css('top', this.pos[Y_DIM]);
+    }
+
+    reset() {
+        this.pos[X_DIM] = this.initialPos[X_DIM];
+        this.pos[Y_DIM] = this.initialPos[Y_DIM]
+        this.render();
+    }
+}
+
+class AiPongPlayer extends PongPlayer {
+    updatePos(newBallPos, ballRadius) {
+        let newBallYCenter = newBallPos[Y_DIM] + ballRadius;
+
+        // Begin following ball. We only attempt to capture the ball Y center.
+        if (newBallYCenter < this.$canvas.position().top) {
+            this.pos[Y_DIM] = Math.max(
+                this.$canvas.position().top - g_OpponentYVel / g_FPS,
+                newBallPos[Y_DIM] + $('#bola').height()
+            );
+        } else if (
+            newBallYCenter > this.$canvas.position().top + this.$canvas.height()
+        ) {
+            this.pos[Y_DIM] = Math.min(
+                this.$canvas.position().top + g_OpponentYVel / g_FPS,
+                newBallPos[Y_DIM]
+            );
+        }
+    }
+}
+
+class HumanPongPlayer extends PongPlayer {
+    constructor($image, $canvas, $video) {
+        super($canvas, $video);
+        this.$image = $image;
+        this.inputCenter = []; // Desired center from tracking processes
+    }
+
+    drawQrPoints() {
+        if (this.$canvas[0].qrPoints == null) {
+            return;
+        }
+
+        let fillStyles = ['yellow', 'orange', 'red'];
+        let context = this.$canvas[0].getContext('2d');
+
+        this.$canvas[0].qrPoints.forEach((point, index) => {
+            context.beginPath();
+            context.arc(point[X_DIM], point[Y_DIM], 5, 0, 2 * Math.PI);
+            context.fillStyle = fillStyles[index];
+            context.fill();
+            context.closePath();
+        });
+
+        this.$canvas[0].qrPoints = null;
+    }
+
+    updatePos() {
+        if (this.inputCenter.length > 0) {
+            this.pos[X_DIM] = this.inputCenter[X_DIM] - this.$canvas.width() / 2;
+            this.pos[Y_DIM] = this.inputCenter[Y_DIM] - this.$canvas.height() / 2;
+        }
+    }
+
+    updateCenter(center) {
+        this.inputCenter = center;
+        this.updatePos();
+    }
+
+    reset() {
+        this.inputCenter = [];
+        super.reset();
+    }
+}
+
+let g_PongPlayersList = [];
+
+$(function () {
     const PLAYER_SCORED = 1,
 	OPPONENT_SCORED = 2,
-	maxBallVel = 1200, // Velocidad maxima de la bola (pixeles / segundo)
-	opponentYVel = 300 // Velocidad maxima vertical del adversario (pixeles / segundo)
+	maxBallVel = 1200; // Velocidad maxima de la bola (pixeles / segundo)
 
     ballVel = [0, 0] // Se necesita reusar. Es la velocidad entre frames.
-
-    // Simulates a class for dynamic dispatching actions on singleplayer context
-    function SingleplayerOpponent() {
-        this.pos = Array(2);
-    }
-
-    SingleplayerOpponent.prototype.reset = function() {
-        this.pos[X_DIM] = $('html').width() - $('#bloque_adversario').width();
-        this.pos[Y_DIM] = ($('html').height() - $('#bloque_adversario').height()) / 2;
-        this.updateRenderedPos();
-    };
-
-    SingleplayerOpponent.prototype.calcDesiredPos = function(newBallYCenter) {
-        let halfHeight = $('#bloque_adversario').height() / 2;
-        let newYCenter = this.pos[Y_DIM] + halfHeight;
-
-        // Bloque del adversario: caso bola por encima o por debajo.
-        // Se limita el incremento de posicion, puesto que si no, el oponente
-        // oscila ilimitadamente en algunos casos.
-        if (newYCenter > newBallYCenter) {
-            this.pos[Y_DIM] = Math.max(
-                newYCenter - opponentYVel / g_FPS, newBallYCenter
-            ) - halfHeight;
-        } else if (newYCenter < newBallYCenter) {
-            this.pos[Y_DIM] = Math.min(
-                newYCenter + opponentYVel / g_FPS, newBallYCenter
-            ) - halfHeight;
-        }
-    };
-
-    SingleplayerOpponent.prototype.ensureWithinBounds = function() {
-        ensureObjectWithinBounds($('#bloque_adversario'), this.pos, $('html'));
-    };
-
-    SingleplayerOpponent.prototype.handleBallCollision =
-    function(ballCenter, ballRadius) {
-         // Ball - AI
-        handleCollision(
-            ballCenter, ballRadius, $('#bloque_adversario'), this.pos
-        );
-    };
-
-    SingleplayerOpponent.prototype.updateRenderedPos = function() {
-        $('#bloque_adversario').css({
-            left: this.pos[X_DIM], top: this.pos[Y_DIM]
-        });
-    }
-
-    // Simulates a class for dynamic dispatching actions on multiplayer context
-    function MultiplayerOpponent() {
-        this.pos = Array(2);
-        this.center = Array(2);
-    }
-
-    // Reuses main player center, which should have been set already
-    MultiplayerOpponent.prototype.reset = function(mainPlayerCenter) {
-        this.center = [
-            $('html').width() - mainPlayerCenter[X_DIM],
-            mainPlayerCenter[Y_DIM]
-        ];
-        this.calcDesiredPos();
-        this.updateRenderedPos();
-    };
-
-    MultiplayerOpponent.prototype.calcDesiredPos = function() {
-        this.pos[X_DIM] = this.center[X_DIM] - $('#bloque_jugador2').width() / 2;
-        this.pos[Y_DIM] = this.center[Y_DIM] - $('#bloque_jugador2').height() / 2;
-    };
-
-    MultiplayerOpponent.prototype.ensureWithinBounds = function() {
-        ensureObjectWithinBounds($('#bloque_jugador2'), this.pos, $('#video_camara2'));
-    };
-
-    MultiplayerOpponent.prototype.handleBallCollision =
-    function(ballCenter, ballRadius) {
-        // Ball - second player
-        handleCollision(
-            ballCenter, ballRadius, $('#bloque_jugador2'), this.pos
-        );
-    };
-
-    MultiplayerOpponent.prototype.updateRenderedPos = function() {
-        $('#bloque_jugador2').css({
-            left: this.pos[X_DIM], top: this.pos[Y_DIM]
-        });
-    };
 
     HighestColorTracker = function () {
         HighestColorTracker.base(this, 'constructor')
@@ -138,27 +144,14 @@ $(function () {
     }
 
     function resetAllObjects() {
-        ballVel = [0, 0]
+        ballVel = [0, 0];
 
-        g_DesiredPlayerCenter[X_DIM] = $('html').width() / 4;
-        g_DesiredPlayerCenter[Y_DIM] = $('html').height() / 2;
-
-        let playerCoords = [
-            g_DesiredPlayerCenter[X_DIM] - $('#bloque_jugador').width() / 2,
-            g_DesiredPlayerCenter[Y_DIM] - $('#bloque_jugador').height() / 2
-        ];
-
-        $('#bloque_jugador').css({
-            left: playerCoords[X_DIM],
-            top: playerCoords[Y_DIM]
-        })
+        g_PongPlayersList.forEach((pongPlayer) => pongPlayer.reset());
 
         $('#bola').css({
             left: ($('html').width() - $('#bola').width()) / 2,
             top: ($('html').height() - $('#bola').height()) / 2
-        })
-
-        g_OpponentObject.reset(g_DesiredPlayerCenter);
+        });
     }
 
     // Obtiene la distancia del color en un pixel respecto
@@ -312,41 +305,19 @@ $(function () {
     }
 
     function tickSimulate() {
-        // Centrar el bloque del jugador en la coordenada detectada:
-        let newPlayerPos = [
-            g_DesiredPlayerCenter[X_DIM] - ($('#bloque_jugador').width() / 2),
-            g_DesiredPlayerCenter[Y_DIM] - ($('#bloque_jugador').height() / 2)
-        ];
-
         newBallPos = [
             $('#bola').position().left + ballVel[X_DIM],
             $('#bola').position().top + ballVel[Y_DIM]
         ];
 
         let ballRadius = $('#bola').width() / 2;
-        let newBallYCenter = newBallPos[Y_DIM] + ballRadius;
 
-        g_OpponentObject.calcDesiredPos(newBallYCenter);
+        g_PongPlayersList.forEach((pongPlayer) => {
+            pongPlayer.updatePos(newBallPos, ballRadius);
+        });
 
         if (g_IsInDebug) {
-            let $canvasObjs = [$('#bloque_jugador'), $('#bloque_jugador2')];
-
-            $canvasObjs.forEach($canvasObj => {
-                let fillStyles = ['yellow', 'orange', 'red'];
-                let context = $canvasObj[0].getContext('2d');
-
-                if ($canvasObj[0].debugPoints != null) {
-                    $canvasObj[0].debugPoints.forEach((point, index) => {
-                        context.beginPath();
-                        context.arc(point[X_DIM], point[Y_DIM], 5, 0, 2 * Math.PI);
-                        context.fillStyle = fillStyles[index];
-                        context.fill();
-                        context.closePath();
-                    });
-
-                    $canvasObj[0].debugPoints = null;
-                }
-            });
+            g_PongPlayersList.forEach((pongPlayer) => pongPlayer.drawQrPoints);
         }
 
         // Asegurar contencion de objetos dentro de los limites:
@@ -381,8 +352,9 @@ $(function () {
                 }
         }
 
-        ensureObjectWithinBounds($('#bloque_jugador'), newPlayerPos, $('#video_camara'));
-        g_OpponentObject.ensureWithinBounds();
+        g_PongPlayersList.forEach((pongPlayer) => {
+            ensureObjectWithinBounds(pongPlayer.$canvas, pongPlayer.pos, pongPlayer.$video);
+        });
 
         // Actualizar bola:
         $('#bola').css({ left: newBallPos[X_DIM], top: newBallPos[Y_DIM] })
@@ -395,15 +367,15 @@ $(function () {
 
         // Colisionar, enviando los objetos DOM, teniendo asi
         // la informacion necesaria de las posiciones anteriores:
-        handleCollision(ballCenter, ballRadius, $('#bloque_jugador'), newPlayerPos);
-        g_OpponentObject.handleBallCollision(ballCenter, ballRadius);
-
-        // Actualizar posicion de los rectangulos
-        // (necesario despues del colisionado, ver arriba):
-        $('#bloque_jugador').css({
-            left: newPlayerPos[X_DIM], top: newPlayerPos[Y_DIM]
+        g_PongPlayersList.forEach((pongPlayer) => {
+            handleCollision(ballCenter, ballRadius, pongPlayer.$canvas, pongPlayer.pos);
         });
-        g_OpponentObject.updateRenderedPos();
+
+        // Actualizar posicion de los rectangulos, necesario despues del
+        // colisionado (ver arriba):
+        g_PongPlayersList.forEach((pongPlayer) => {
+            pongPlayer.render();
+        });
 
         // Limitar la velocidad maxima para no crear el caos,
         // calculandola primero (pixeles / frame):
@@ -428,15 +400,9 @@ $(function () {
 
 
     function clearPlayerBlock() {
-        context = $('#bloque_jugador')[0].getContext('2d');
-        context.clearRect(0, 0, $('#bloque_jugador').width(), $('#bloque_jugador').height());
-    }
-
-    function resizePlayerBlock($canvasObj, width, height) {
-        $canvasObj.width(width);
-        $canvasObj.height(height);
-        $canvasObj.prop('width', width);
-        $canvasObj.prop('height', height);
+        let $canvas = g_PongPlayersList[0].$canvas;
+        context = $canvas[0].getContext('2d');
+        context.clearRect(0, 0, $canvas.width(), $canvas.height());
     }
 
     function setExternalCameraTracking() {
@@ -451,8 +417,7 @@ $(function () {
 
     colorTracker.on('track', function (event) {
         // event.data is only set by trackingjs. It is not a default property.
-        g_DesiredPlayerCenter[X_DIM] = event.data[0];
-        g_DesiredPlayerCenter[Y_DIM] = event.data[1];
+        g_PongPlayersList[0].updateCenter([event.data[0], event.data[1]]);
     })
 
     $('#icono_ayuda').click(function () {
@@ -497,9 +462,10 @@ $(function () {
                 // Add the player amount choices
                 $('#game_specific_select').append(
                     new Option("Un jugador", 'individual')
-                );
-                $('#game_specific_select').append(
-                    new Option("Dos jugadores (local)", 'multijugador')
+                ).append(
+                    new Option("Dos jugadores (local)", 'simple_multiplayer')
+                ).append(
+                    new Option("Cuatro jugadores (local)", 'double_multiplayer')
                 );
 
                 $('#texto_ayuda').html("El juego realizar&aacute; un seguimiento a trav&eacute;s de la c&aacute;mara "
@@ -523,21 +489,58 @@ $(function () {
                 // Completar desactivacion del renderizado
                 $(this).hide();
 
-                if ($('#game_detection_select').val() === 'qr') {
-                    g_isInQrDetectionMode = true;
+                switch ($('#game_specific_select').val()) {
+                    case 'simple_multiplayer': {
+                        let top = $('html').height() / 2 - $('#player_block1').height() / 2;
+                        $('#player_block1').css('top', top);
+                        $('#player_block2').css('top', top);
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block1_image'), $('#player_block1'),
+                            $('#video_camara1')
+                        ));
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block2_image'), $('#player_block2'),
+                            $('#video_camara2')
+                        ));
+                        break;
+                    } case 'double_multiplayer': {
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block1_image'), $('#player_block1'),
+                            $('#video_camara1')
+                        ));
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block2_image'), $('#player_block2'),
+                            $('#video_camara2')
+                        ));
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block3_image'), $('#player_block3'),
+                            $('#video_camara1')
+                        ));
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block4_image'), $('#player_block4'),
+                            $('#video_camara2')
+                        ));
+                        break;
+                    } default: {
+                        let top = $('html').height() / 2 - $('#player_block1').height() / 2;
+                        $('#player_block1').css('top', top);
+                        $('#player_block2').css('top', top);
+                        g_PongPlayersList.push(new HumanPongPlayer(
+                            $('#player_block1_image'), $('#player_block1'),
+                            $('#video_camara1')
+                        ));
+                        g_PongPlayersList.push(new AiPongPlayer(
+                            $('#ai_player_block'), $('#video_camara2')
+                        ));
+                        break;
+                    }
                 }
 
-                if ($('#game_specific_select').val() === 'multijugador') {
-                    g_OpponentObject = new MultiplayerOpponent();
-                    $('#bloque_jugador2').show();
-
-                    // We want to allow a second user, notify the authentication layer
+                for (let i = 1; i < g_PongPlayersList.length; i++) {
+                    // We want to allow another user, notify the authentication layer
                     window.parent.postMessage(
                         JSON.stringify(['add_session_user_slot']), '*'
                     );
-                } else {
-                    g_OpponentObject = new SingleplayerOpponent();
-                    $('#bloque_adversario').show()
                 }
 
                 $(this).modal('hide');
@@ -545,39 +548,38 @@ $(function () {
                 resetAllObjects()
 
                 // Configurar bloque de el/los jugador/es:
+                let $canvas = g_PongPlayersList[0].$canvas;
+
                 switch ($('#game_specific_select').val()) {
                     case 'rojo': {
-                        $('#bloque_jugador').css('background-color', 'red')
-                        break
+                        $canvas.css('background-color', 'red');
+                        break;
                     } case 'verde': {
-                        $('#bloque_jugador').css('background-color', 'green')
-                        break
+                        $canvas.css('background-color', 'green');
+                        break;
                     } case 'azul': {
-                        $('#bloque_jugador').css('background-color', 'blue')
-                        break
+                        $canvas.css('background-color', 'blue');
+                        break;
                     }
                 }
 
-                $('#bloque_jugador').show()
-
                 // Configurar bola:
-                canvas = $('#bola')[0] // Obtener el canvas del style object (no son lo mismo)
-                // Arreglar tamanyo predeterminado del canvas:
-                canvas.width = $('#bola').width()
-                canvas.height = $('#bola').height()
-
-                ctx = canvas.getContext('2d')
-                ctx.beginPath()
-                ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2)
-                ctx.fillStyle = 'purple'
-                ctx.fill()
-                ctx.strokeStyle = 'purple'
-                ctx.stroke()
+                ctx = $('#bola')[0].getContext('2d');
+                ctx.beginPath();
+                let ballRadius = $('#bola').prop('width') / 2;
+                ctx.arc(
+                    ballRadius, $('#bola').prop('height') / 2, ballRadius, 0,
+                    Math.PI * 2
+                );
+                ctx.fillStyle = 'purple';
+                ctx.fill();
+                ctx.strokeStyle = 'purple';
+                ctx.stroke();
 
                 $('#bola').show()
 
                 if (!g_isTrackingImageExternally && $('#game_detection_select').val() === 'color') {
-                    tracking.track('#video_camara', colorTracker, { camera: true })
+                    tracking.track('#video_camara1', colorTracker, { camera: true })
                 }
 
                 if (annyang) {
@@ -609,8 +611,8 @@ $(function () {
 
         // Step 0: Prepare - Scale the find pattern points to the playable space
         let scaleRatios = [
-            $('#video_camara').width() / qrCaptureDims[X_DIM],
-            $('#video_camara').height() / qrCaptureDims[Y_DIM]
+            $('#video_camara1').width() / qrCaptureDims[X_DIM],
+            $('#video_camara1').height() / qrCaptureDims[Y_DIM]
         ];
 
         let scaledBottomLeftPoint = [
@@ -660,8 +662,8 @@ $(function () {
         // horizontal vector to fit the original aspect ratio and get a squared shape.
         // The horizontalRatio variable will be used later to scale and fit a
         // squared QR image into the collision box. This is a precise approach.
-        let horizontalRatio = origAspectRatio * $('#video_camara').height()
-            / $('#video_camara').width();
+        let horizontalRatio = origAspectRatio * $('#video_camara1').height()
+            / $('#video_camara1').width();
 
         let vecSquaredHorizontalQRSide = [
             vecHorizontalQrSide[X_DIM] * horizontalRatio,
@@ -682,34 +684,16 @@ $(function () {
 
         // Non-canvas transformations are ready at this moment, and we can draw.
 
-        let $canvasObj, $imageObj, $videoCamObj;
+        let pongPlayer = g_PongPlayersList[userSessionSlot];
+        pongPlayer.$canvas.prop('width', collisionBoxSidesLength[X_DIM]);
+        pongPlayer.$canvas.prop('height', collisionBoxSidesLength[Y_DIM]);
 
-        if (userSessionSlot == 0) {
-            $canvasObj = $('#bloque_jugador');
-            $imageObj = $('#imagen_bloque_jugador');
-            $videoCamObj = $('#video_camara');
+        // Set auxiliar human player block center for next frame (AI is ignored)
+        centralPoint[X_DIM] += pongPlayer.$video.position().left;
+        pongPlayer.updateCenter(centralPoint);
 
-            // Set auxiliar player block center for next frame
-            g_DesiredPlayerCenter = centralPoint;
-        } else {
-            $canvasObj = $('#bloque_jugador2');
-            $imageObj = $('#imagen_bloque_jugador2');
-            $videoCamObj = $('#video_camara2');
-
-            // Set auxiliar player block center for next frame
-            g_OpponentObject.center = [
-                centralPoint[X_DIM] + $videoCamObj.width(),
-                centralPoint[Y_DIM]
-            ];
-        }
-
-        resizePlayerBlock($canvasObj, collisionBoxSidesLength[X_DIM],
-            collisionBoxSidesLength[Y_DIM]);
-
-        let context = $canvasObj[0].getContext('2d');
-        $imageObj.prop('src', imgUrl);
-
-        $canvasObj.css('background-color', 'lightblue');
+        let context = pongPlayer.$canvas[0].getContext('2d');
+        pongPlayer.$image.prop('src', imgUrl);
 
         // Remember initial transformations (these are going to be altered)
         context.save();
@@ -730,7 +714,7 @@ $(function () {
         // Prepare rotation. This must be called before the actual drawing.
         context.rotate(qrRotation);
 
-        context.drawImage($imageObj[0], -squaredQrSideLength / 2,
+        context.drawImage(pongPlayer.$image[0], -squaredQrSideLength / 2,
             -squaredQrSideLength / 2, squaredQrSideLength,
             squaredQrSideLength);
 
@@ -739,21 +723,21 @@ $(function () {
 
         // Prepare debugging points transport array, even if we are not in debug
         // yet, to have these points properly placed when debug activates
-        $canvasObj[0].debugPoints = [
+        pongPlayer.$canvas[0].qrPoints = [
             [
-                $videoCamObj.position().left + scaledBottomLeftPoint[X_DIM]
-                - $canvasObj.position().left,
-                scaledBottomLeftPoint[Y_DIM] - $canvasObj.position().top
+                pongPlayer.$video.position().left + scaledBottomLeftPoint[X_DIM]
+                - pongPlayer.$canvas.position().left,
+                scaledBottomLeftPoint[Y_DIM] - pongPlayer.$canvas.position().top
             ],
             [
-                $videoCamObj.position().left + scaledTopLeftPoint[X_DIM]
-                - $canvasObj.position().left,
-                scaledTopLeftPoint[Y_DIM] - $canvasObj.position().top
+                pongPlayer.$video.position().left + scaledTopLeftPoint[X_DIM]
+                - pongPlayer.$canvas.position().left,
+                scaledTopLeftPoint[Y_DIM] - pongPlayer.$canvas.position().top
             ],
             [
-                $videoCamObj.position().left + scaledTopRightPoint[X_DIM]
-                - $canvasObj.position().left,
-                scaledTopRightPoint[Y_DIM] - $canvasObj.position().top
+                pongPlayer.$video.position().left + scaledTopRightPoint[X_DIM]
+                - pongPlayer.$canvas.position().left,
+                scaledTopRightPoint[Y_DIM] - pongPlayer.$canvas.position().top
             ]
         ];
     }

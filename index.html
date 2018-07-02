@@ -16,9 +16,6 @@
     <script type="text/JavaScript" src="js/effects.js"></script>
 </head>
 <body>
-    <video id="video_camara" class="elemento_absoluto" autoplay loop muted></video>
-    <video id="video_camara2" class="elemento_absoluto" autoplay loop muted></video>
-
     <div id="ventana_login" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -52,13 +49,24 @@
             </div>
         </div>
     </div>
+
+    <video id="video_camara1" class="elemento_absoluto" autoplay loop muted></video>
+    <video id="video_camara2" class="elemento_absoluto" autoplay loop muted></video>
+
     <div id="goles_jugador" class="marcador elemento_absoluto">0</div>
     <div id="goles_adversario" class="marcador elemento_absoluto">0</div>
-    <canvas id="bloque_jugador" class="elemento_absoluto" width="100" height="100"></canvas>
-    <canvas id="bloque_jugador2" class="elemento_absoluto" width="100" height="100"></canvas>
-    <canvas id="bola" class="elemento_absoluto"></canvas>
-    <canvas id="bloque_adversario" class="elemento_absoluto"></canvas>
-    <img id="imagen_bloque_jugador" />
-    <img id="imagen_bloque_jugador2" />
+
+    <canvas id="player_block1" class="elemento_absoluto" width="100" height="100"></canvas>
+    <canvas id="player_block2" class="elemento_absoluto" width="100" height="100"></canvas>
+    <canvas id="player_block3" class="elemento_absoluto" width="100" height="100"></canvas>
+    <canvas id="player_block4" class="elemento_absoluto" width="100" height="100"></canvas>
+    <canvas id="ai_player_block" class="elemento_absoluto" width="20" height="200"></canvas>
+
+    <canvas id="bola" class="elemento_absoluto" width="100" height="100"></canvas>
+
+    <img id="player_block1_image" />
+    <img id="player_block2_image" />
+    <img id="player_block3_image" />
+    <img id="player_block4_image" />
 </body>
 </html>

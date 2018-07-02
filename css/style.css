@@ -15,6 +15,7 @@ body {
     padding: 0px;
     overflow-y: hidden;
 }
+
 .elemento_absoluto {
     position: absolute;
 }
@@ -45,10 +46,12 @@ body {
     font-family: verdana;
 }
 
-#video_camara, #video_camara2 {
+#video_camara1, #video_camara2 {
     width: 50%;
     height: 100%;
     object-fit: fill;
+
+    /* Never hide via 'display' attribute, or tracking breaks. Only via this: */
     visibility: hidden;
 }
 
@@ -78,26 +81,46 @@ body {
     color: red;
 }
 
-#bloque_jugador, #bloque_jugador2 {
-    background-color: lightgray;
-    display: none;
-    height: 100px;
-    width: 100px;
-}
-
-#bola {
-    width: 100px;
-    height: 100px;
-    display: none;
-}
-
-#bloque_adversario {
-    width: 20px;
-    height: 200px;
+#ai_player_block {
     background-color: white;
+    top: calc(50% - 100px);
+    left: calc(100% - 20px);
+}
+
+/* Left side */
+#player_block1 {
+    background-color: indianred;
+    left: calc(25% - 50px);
+    top: calc(25% - 50px);
+}
+
+/* Right side */
+#player_block2 {
+    background-color: lightblue;
+    left: calc(75% - 50px);
+    top: calc(25% - 50px);
+}
+
+/* Left side */
+#player_block3 {
+    background-color: darkorange;
+    left: calc(25% - 50px);
+    top: calc(75% - 50px);
+}
+
+/* Right side */
+#player_block4 {
+    background-color: deepskyblue;
+    left: calc(75% - 50px);
+    top: calc(75% - 50px);
+}
+
+#ai_player_block, #bola, #player_block1, #player_block2, #player_block3,
+#player_block4 {
     display: none;
 }
 
-#imagen_bloque_jugador, #imagen_bloque_jugador2 {
-    visibility: hidden;
+#player_block1_image, #player_block2_image, #player_block2_image,
+#player_block2_image {
+    display: none;
 }

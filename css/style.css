@@ -7,9 +7,6 @@ html, body {
 body {
     background-image: url('../images/fondo.png');
     background-repeat: no-repeat;
-    -webkit-background-size: cover;
-    -moz-background-size: cover;
-    -o-background-size: cover;
     background-size: cover;
     margin: 0px;
     padding: 0px;
@@ -67,16 +64,12 @@ body {
 
 #goles_jugador {
     width: calc(50% - 10px);
-    width: -webkit-calc(50% - 10px);
-    width: -moz-calc(50% - 10px);
     text-align: right;
     color: green;
 }
 
 #goles_adversario {
     left: calc(50% + 10px);
-    left: -webkit-calc(50% + 10px);
-    left: -moz-calc(50% + 10px);
     text-align: right;
     color: red;
 }

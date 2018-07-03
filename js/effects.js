@@ -276,7 +276,7 @@ class HumanPongPlayer extends PongPlayer {
                 // Prepare Canvas configs to reuse during miss feedback frames
                 context.globalAlpha = 0;
                 context.globalCompositeOperation = 'source-atop';
-                context.fillStyle = 'black';
+                context.fillStyle = this.$canvas.css('background-color');
                 this.qrDetectStatus = QrDetectStatus.QR_FEEDBACKING_MISS;
                 // Don't break: we're already at the first frame to feedback miss
             } case QrDetectStatus.QR_FEEDBACKING_MISS: {

@@ -112,36 +112,36 @@ body {
 
 /* Left side */
 .default_quarter1 {
-    left: calc(25% - 50px);
-    top: calc(50% - 50px);
+    left: calc(25% - 75px);
+    top: calc(50% - 75px);
 }
 
 /* Right side */
 .simple_multiplayer_quarter2 {
-    left: calc(75% - 50px);
-    top: calc(50% - 50px);
+    left: calc(75% - 75px);
+    top: calc(50% - 75px);
 }
 
 /* Left side */
 .double_multiplayer_quarter1 {
-    left: calc(25% - 50px);
-    top: calc(25% - 50px);
+    left: calc(25% - 75px);
+    top: calc(25% - 75px);
 }
 
 /* Right side */
 .double_multiplayer_quarter2 {
-    left: calc(75% - 50px);
-    top: calc(25% - 50px);
+    left: calc(75% - 75px);
+    top: calc(25% - 75px);
 }
 
 /* Left side */
 .double_multiplayer_quarter3 {
-    left: calc(25% - 50px);
-    top: calc(75% - 50px);
+    left: calc(25% - 75px);
+    top: calc(75% - 75px);
 }
 
 /* Right side */
 .double_multiplayer_quarter4 {
-    left: calc(75% - 50px);
-    top: calc(75% - 50px);
+    left: calc(75% - 75px);
+    top: calc(75% - 75px);
 }

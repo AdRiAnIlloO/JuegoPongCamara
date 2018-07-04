@@ -18,6 +18,11 @@ const QrDetectStatus = {
     QR_FEEDBACKED_MISS: 3
 };
 
+const SyncMessageType = {
+    SYNC_MESSAGE_UNCONNECTED_PLAYERS: 0,
+    SYNC_MESSAGE_QR_MISSED_CUR_FRAME: 1
+}
+
 // Related to visual feedback on undetected QR codes each frame (alpha / seconds)
 const QR_FEEDBACK_MISS_FADE_SPEED = 0.25;
 
@@ -133,6 +138,11 @@ class PongPlayer {
 }
 
 class AiPongPlayer extends PongPlayer {
+    constructor($canvas, $video) {
+        super($canvas, $video);
+        this.isReady = true; // To filter out myself easily from paused players
+    }
+
     updatePos(newBallPos, ballRadius) {
         let newBallYCenter = newBallPos[Y_DIM] + ballRadius;
 
@@ -271,6 +281,9 @@ class HumanPongPlayer extends PongPlayer {
         switch (this.qrDetectStatus) {
             case QrDetectStatus.QR_DETECTED_CUR_FRAME: {
                 this.qrDetectStatus = QrDetectStatus.QR_MISSED_FIRST_FRAME;
+                handleSyncMessage(undefined,
+                    SyncMessageType.SYNC_MESSAGE_QR_MISSED_CUR_FRAME,
+                    'alert-danger', false);
                 break;
             } case QrDetectStatus.QR_MISSED_FIRST_FRAME: {
                 // Prepare Canvas configs to reuse during miss feedback frames
@@ -283,8 +296,14 @@ class HumanPongPlayer extends PongPlayer {
                 context.globalAlpha += QR_FEEDBACK_MISS_FADE_SPEED / g_FPS;
                 context.fillRect(0, 0, this.$canvas.width(), this.$canvas.height());
 
-                if (context.globalAlpha >= 1) {
+                // Workaround floating point precision not reaching 1
+                if (context.globalAlpha >= 0.9) {
                     this.qrDetectStatus = QrDetectStatus.QR_FEEDBACKED_MISS;
+                    handleSyncMessage("No se detecta el c&oacute;digo de un jugador."
+                        + " Por favor, centra el c&oacute;digo a corta distancia"
+                        + " frente la c&aacute;mara.",
+                        SyncMessageType.SYNC_MESSAGE_QR_MISSED_CUR_FRAME,
+                        'alert-danger', true);
                 }
 
                 break;
@@ -299,6 +318,34 @@ class HumanPongPlayer extends PongPlayer {
 }
 
 let g_PongPlayersList = [];
+
+function handleSyncMessage(text, type, alertClass,
+    toggleRenderCondition
+) {
+    let $alert = $('#misc_quarter1_messages');
+
+    if ($alert[0].curSyncMessageType === type) {
+        if (!toggleRenderCondition) {
+            $alert.removeClass(alertClass);
+            $alert.hide();
+            $alert[0].curSyncMessageType = null;
+        }
+
+        return;
+    }
+
+    if ($alert[0].curSyncMessageType != null) {
+        return;
+    }
+
+    if (toggleRenderCondition) {
+        $alert.stop();
+        $alert.addClass(alertClass);
+        $alert.html(text);
+        $alert.show();
+        $alert[0].curSyncMessageType = type;
+    }
+}
 
 $(function () {
     HighestColorTracker = function () {
@@ -489,9 +536,22 @@ $(function () {
             pongPlayer.handleBallCollision(ballRadius);
         });
 
-        // Actualizar posicion de los rectangulos, necesario despues del
-        // colisionado (ver arriba):
-        g_PongPlayersList.forEach((pongPlayer) => pongPlayer.render());
+        let numPausedPlayers = 0;
+
+        let pausedPlayers = g_PongPlayersList.filter((pongPlayer) => {
+            // Actualizar posicion de los rectangulos, necesario despues del
+            // colisionado (ver arriba):
+            pongPlayer.render();
+
+            return !pongPlayer.isReady;
+        });
+
+        handleSyncMessage("Falta(n) " + pausedPlayers.length + " jugador(es)"
+            + " por conectarse. Todos los avatares seguir&aacute;n en pausa"
+            + " hasta que los usuarios pendientes mostr&eacute;is el"
+            + " c&oacute;digo frente a la c&aacute;mara.",
+            SyncMessageType.SYNC_MESSAGE_UNCONNECTED_PLAYERS, 'alert-warning',
+            pausedPlayers.length > 0);
 
         // Limitar la velocidad maxima para no crear el caos,
         // calculandola primero (pixeles / frame):
@@ -813,6 +873,7 @@ $(function () {
         // Non-canvas transformations are ready at this moment, and we can draw.
 
         let pongPlayer = g_PongPlayersList[userSessionSlot];
+        pongPlayer.isReady = true;
         pongPlayer.qrDetectStatus = QrDetectStatus.QR_DETECTED_CUR_FRAME;
 
         {

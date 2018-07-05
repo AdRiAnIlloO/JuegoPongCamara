@@ -934,9 +934,13 @@ $(function () {
                 setExternalCameraTracking();
                 break;
             } case 'transform_player_block_from_qr': {
-                transformPlayerBlockFromQR(dataArray[1], dataArray[2],
-                    dataArray[3], dataArray[4], dataArray[5], dataArray[6],
-                    dataArray[7], dataArray[8]);
+                // Check if Pong match started to prevent calling and getting error
+                if (g_IsInQRMode) {
+                    transformPlayerBlockFromQR(dataArray[1], dataArray[2],
+                        dataArray[3], dataArray[4], dataArray[5], dataArray[6],
+                        dataArray[7], dataArray[8]);
+                }
+
                 break;
             }
         }

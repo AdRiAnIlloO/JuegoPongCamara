@@ -41,11 +41,12 @@ const QR_SIDE_TO_FIND_PATTERNS_CENTER_DIST_RATIO = (29 / 23);
 // Allows calculating elapsed times to call simulation ticks
 let g_LastSimulateMsTime;
 
+let g_NumPausedPlayers = 0;
+
 class PongPlayer {
     constructor($canvas, $video) {
         this.$canvas = $canvas;
         this.$video = $video;
-        this.isReady = false; // True when an attached User is connected
 
          // NOTE: Must do this which should remove 'display: hidden' to avoid
          // jQuery from returning 0 on positions without this call otherwise!
@@ -140,7 +141,6 @@ class PongPlayer {
 class AiPongPlayer extends PongPlayer {
     constructor($canvas, $video) {
         super($canvas, $video);
-        this.isReady = true; // To filter out myself easily from paused players
     }
 
     updatePos(newBallPos, ballRadius) {
@@ -169,6 +169,8 @@ class HumanPongPlayer extends PongPlayer {
         this.$image = $image;
         this.inputCenter = []; // Desired center from tracking processes
         this.qrDetectStatus = QrDetectStatus.QR_MISSED_FIRST_FRAME;
+        this.isReady = false; // Has the attached User interacted at least once?
+        g_NumPausedPlayers++;
     }
 
     drawQrImage_Transform(collisionBoxSidesLength, isInMirrorMode,
@@ -257,6 +259,11 @@ class HumanPongPlayer extends PongPlayer {
     }
 
     updatePos() {
+        if (g_NumPausedPlayers > 0) {
+            // Wait until all players interact (connect)
+            return;
+        }
+
         if (this.inputCenter.length > 0) {
             this.pos[X_DIM] = this.inputCenter[X_DIM] - this.$canvas.width() / 2;
             this.pos[Y_DIM] = this.inputCenter[Y_DIM] - this.$canvas.height() / 2;
@@ -536,22 +543,18 @@ $(function () {
             pongPlayer.handleBallCollision(ballRadius);
         });
 
-        let numPausedPlayers = 0;
-
-        let pausedPlayers = g_PongPlayersList.filter((pongPlayer) => {
+        g_PongPlayersList.forEach((pongPlayer) => {
             // Actualizar posicion de los rectangulos, necesario despues del
             // colisionado (ver arriba):
             pongPlayer.render();
-
-            return !pongPlayer.isReady;
         });
 
-        handleSyncMessage("Falta(n) " + pausedPlayers.length + " jugador(es)"
+        handleSyncMessage("Falta(n) " + g_NumPausedPlayers + " jugador(es)"
             + " por conectarse. Todos los avatares seguir&aacute;n en pausa"
             + " hasta que los usuarios pendientes mostr&eacute;is el"
             + " c&oacute;digo frente a la c&aacute;mara.",
             SyncMessageType.SYNC_MESSAGE_UNCONNECTED_PLAYERS, 'alert-warning',
-            pausedPlayers.length > 0);
+            g_NumPausedPlayers > 0);
 
         // Limitar la velocidad maxima para no crear el caos,
         // calculandola primero (pixeles / frame):
@@ -792,6 +795,18 @@ $(function () {
         userSessionSlot, isInMirrorMode, imgUrl, origAspectRatio, qrCaptureDims,
         bottomLeftPoint, topLeftPoint, topRightPoint
     ) {
+        let pongPlayer = g_PongPlayersList[userSessionSlot];
+        pongPlayer.qrDetectStatus = QrDetectStatus.QR_DETECTED_CUR_FRAME;
+
+        if (!pongPlayer.isReady) {
+            g_NumPausedPlayers = Math.max(0, g_NumPausedPlayers - 1);
+            pongPlayer.isReady = true;
+        }
+
+        if (g_NumPausedPlayers > 0) {
+            return;
+        }
+
         // This block first calculates non-canvas transformations
 
         // Step 0: Prepare - Scale the find pattern points to the playable space
@@ -870,11 +885,7 @@ $(function () {
         let squaredQrSideLength = vecSquaredHorizontalQRSide[X_DIM]
             / Math.cos(qrRotation);
 
-        // Non-canvas transformations are ready at this moment, and we can draw.
-
-        let pongPlayer = g_PongPlayersList[userSessionSlot];
-        pongPlayer.isReady = true;
-        pongPlayer.qrDetectStatus = QrDetectStatus.QR_DETECTED_CUR_FRAME;
+        // Non-canvas transformations are ready at this moment, and we can draw
 
         {
             // Old code (dynamic collision box)
